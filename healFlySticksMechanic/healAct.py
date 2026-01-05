@@ -183,7 +183,7 @@ class Game(arcade.Window):
         self.hit_count = 0
         self.miss_count = 0
         self.trick_count = 0
-        self.spawn_five_sticks(from_right=False)
+        self.spawn_sticks(from_right=False)
 
     # Фон
     def load_background(self):
