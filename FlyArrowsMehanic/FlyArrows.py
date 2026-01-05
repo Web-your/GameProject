@@ -166,7 +166,7 @@ class MyGame(arcade.Window):
         dct_index = {0: "arrow0.png", 1: "arrow1.png", 2: "arrow2.png", 3: "arrow3.png"}
         for i, item in enumerate(self.arrows):
             index, tcycle, tarrow = item
-            if self.total_time - 2 >= tcycle * self.cycle_time - (400/self.speed): # отрисовываем стрелку за ранее расшитывая сколько времени её нужно долететь
+            if self.total_time - 2 >= tcycle * self.cycle_time - (400/self.speed): # отрисовываем стрелку за ранее расчитывая сколько времени ей нужно долететь
                 player_sprite = arcade.Sprite(dct_index[index], scale=0.5)
                 if index == 0:
                     player_sprite.center_x = self.width // 5
