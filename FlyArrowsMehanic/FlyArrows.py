@@ -36,7 +36,7 @@ class MyGame(arcade.Window):
             elif index == 2:
                 self.arrows_2.add(tcycle * self.cycle_time + 2)
             elif index == 3:
-                self.arrows_3.add(tcycle * self.cycle_time + 2)
+                self.arrows_3.add(tcycle * self.cycle_time + 2) # заполняем массивы временем прилёта стрелок
 
         self.detect_sprite_0 = arcade.Sprite("detect_arrow0.png", scale=0.5) 
         self.detect_sprite_1 = arcade.Sprite("detect_arrow1.png", scale=0.5)
@@ -62,7 +62,7 @@ class MyGame(arcade.Window):
         self.keys_pressed_last_0 = None
         self.keys_pressed_last_1 = None
         self.keys_pressed_last_2 = None
-        self.keys_pressed_last_3 = None
+        self.keys_pressed_last_3 = None # переменные времени нажатых прошлых кнопок стрелок
 
     def on_draw(self):
         """Этот метод отвечает за отрисовку содержимого окна"""
@@ -74,13 +74,13 @@ class MyGame(arcade.Window):
     def on_update(self, delta_time):
         """Этот метод отвечает за обновление логики игры (анимации, взаимодействия и т. д.)"""
         self.total_time += delta_time
-        self.fly_arrows()
-        self.fly_arrows_vid(delta_time)
+        self.fly_arrows() # создание стрелок
+        self.fly_arrows_vid(delta_time) # отрисовка движения клеток
         if arcade.key.LEFT in self.keys_pressed or arcade.key.A in self.keys_pressed:
             for i in self.arrows_0:
-                if i - 0.2 < self.keys_pressed_0 < i + 0.2:
+                if i - 0.2 < self.keys_pressed_0 < i + 0.2: # проверяем время нажатия кнопки с временным промежутком прилета стрелки
                     self.detect_sprite_0.scale = 0.6
-                    if self.keys_pressed_0 != self.keys_pressed_last_0:
+                    if self.keys_pressed_0 != self.keys_pressed_last_0: # проверяем не было ли зашитанно это нажатие(время)
                         self.count += 1
                         self.keys_pressed_last_0 = self.keys_pressed_0
                     break
@@ -90,9 +90,9 @@ class MyGame(arcade.Window):
             self.detect_sprite_0.scale = 0.5
         if arcade.key.RIGHT in self.keys_pressed or arcade.key.D in self.keys_pressed:
             for i in self.arrows_3:
-                if i - 0.2 < self.keys_pressed_3 < i + 0.2:
+                if i - 0.2 < self.keys_pressed_3 < i + 0.2: # проверяем время нажатия кнопки с временным промежутком прилета стрелки
                     self.detect_sprite_3.scale = 0.6
-                    if self.keys_pressed_3 != self.keys_pressed_last_3:
+                    if self.keys_pressed_3 != self.keys_pressed_last_3: # проверяем не было ли зашитанно это нажатие(время)
                         self.count += 1
                         self.keys_pressed_last_3 = self.keys_pressed_3
                     break
@@ -102,9 +102,9 @@ class MyGame(arcade.Window):
             self.detect_sprite_3.scale = 0.5
         if arcade.key.UP in self.keys_pressed or arcade.key.W in self.keys_pressed:
             for i in self.arrows_1:
-                if i - 0.2 < self.keys_pressed_1 < i + 0.2:
+                if i - 0.2 < self.keys_pressed_1 < i + 0.2: # проверяем время нажатия кнопки с временным промежутком прилета стрелки
                     self.detect_sprite_1.scale = 0.6
-                    if self.keys_pressed_1 != self.keys_pressed_last_1:
+                    if self.keys_pressed_1 != self.keys_pressed_last_1: # проверяем не было ли зашитанно это нажатие(время)
                         self.count += 1
                         self.keys_pressed_last_1 = self.keys_pressed_1
                     break
@@ -114,9 +114,9 @@ class MyGame(arcade.Window):
             self.detect_sprite_1.scale = 0.5
         if arcade.key.DOWN in self.keys_pressed or arcade.key.S in self.keys_pressed:
             for i in self.arrows_2:
-                if i - 0.2 < self.keys_pressed_2 < i + 0.2:
+                if i - 0.2 < self.keys_pressed_2 < i + 0.2: # проверяем время нажатия кнопки с временным промежутком прилета стрелки
                     self.detect_sprite_2.scale = 0.6
-                    if self.keys_pressed_2 != self.keys_pressed_last_2:
+                    if self.keys_pressed_2 != self.keys_pressed_last_2: # проверяем не было ли зашитанно это нажатие(время)
                         self.count += 1
                         self.keys_pressed_last_2 = self.keys_pressed_2
                     break
@@ -150,7 +150,7 @@ class MyGame(arcade.Window):
     def on_key_press(self, key, modifiers):
         self.keys_pressed.add(key)
         if arcade.key.LEFT == key or arcade.key.A == key:
-            self.keys_pressed_0 = self.total_time
+            self.keys_pressed_0 = self.total_time # создаём перемменную с временнем нажатия кнопки
             self.keys_released_0 = None
         elif arcade.key.UP == key or arcade.key.W == key:
             self.keys_pressed_1 = self.total_time
@@ -166,7 +166,7 @@ class MyGame(arcade.Window):
         dct_index = {0: "arrow0.png", 1: "arrow1.png", 2: "arrow2.png", 3: "arrow3.png"}
         for i, item in enumerate(self.arrows):
             index, tcycle, tarrow = item
-            if self.total_time - 2 >= tcycle * self.cycle_time - (400/self.speed):
+            if self.total_time - 2 >= tcycle * self.cycle_time - (400/self.speed): # отрисовываем стрелку за ранее расшитывая сколько времени её нужно долететь
                 player_sprite = arcade.Sprite(dct_index[index], scale=0.5)
                 if index == 0:
                     player_sprite.center_x = self.width // 5
@@ -185,7 +185,7 @@ class MyGame(arcade.Window):
 
     def fly_arrows_vid(self, delta_time):
         for i, arrow in enumerate(self.all_arrow_sprites):
-            arrow.center_y += self.speed * delta_time
+            arrow.center_y += self.speed * delta_time # двигаем каждую стрелку
             if arrow.center_y > 800:
                 self.all_arrow_sprites.pop(i)
 
