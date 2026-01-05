@@ -1,4 +1,4 @@
-# """ Name: Вася, Date: 01.01.2026, WhatYouDo: сделал пример кода"""
+# """ Name: Иван, Date: 05.01.2026, WhatYouDo: механика боя защитника (передвижение/увороты)"""
 import arcade
 import random
 

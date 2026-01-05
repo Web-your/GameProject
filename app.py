@@ -1,3 +1,4 @@
+# """ Name: Иван, Date: 05.01.2026, WhatYouDo: пример объединения игры"""
 import arcade
 
 from Defender_Battle.main import setup_defender
