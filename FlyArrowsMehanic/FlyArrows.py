@@ -17,15 +17,17 @@ class MyGame(arcade.Window):
     def setup(self):
         self.arrows = [[0, 1, 2], [1, 2, 1], [2, 3, 1], [3, 4, 1], [2, 5, 1], [0, 4, 1]] # создаём или передаём массив стрелок
         ### Первое число в массиве стрелок направление 0-влево, 1-вверх, 2-вправо, 3-вниз
-        # Второе число это номер цикла###
+        # Второе число это номер цикла
+        # Третье число время стрелки сколько циклов её надо держать###
         self.cycle_time = 0.5 # создаём или передаём время цикла
-        self.total_time = 0.0
-        self.speed = 400
-        self.count = 0
+        self.total_time = 0.0 # Таймер
+        self.speed = 400 # скорость движения стрелок
+        self.count = 0 # Количество верных поподаний
         self.arrows_0 = set()
         self.arrows_1 = set()
         self.arrows_2 = set()
         self.arrows_3 = set()
+        # Массивы для проверки поподаний стрелок
         for index, tcycle, tarrow in self.arrows:
             if index == 0:
                 self.arrows_0.add(tcycle * self.cycle_time + 2)
@@ -36,7 +38,7 @@ class MyGame(arcade.Window):
             elif index == 3:
                 self.arrows_3.add(tcycle * self.cycle_time + 2)
 
-        self.detect_sprite_0 = arcade.Sprite("detect_arrow0.png", scale=0.5)
+        self.detect_sprite_0 = arcade.Sprite("detect_arrow0.png", scale=0.5) 
         self.detect_sprite_1 = arcade.Sprite("detect_arrow1.png", scale=0.5)
         self.detect_sprite_2 = arcade.Sprite("detect_arrow2.png", scale=0.5)
         self.detect_sprite_3 = arcade.Sprite("detect_arrow3.png", scale=0.5)
@@ -47,7 +49,7 @@ class MyGame(arcade.Window):
         self.detect_sprite_2.center_x = self.width // 5 * 3
         self.detect_sprite_2.center_y = self.height - 100
         self.detect_sprite_3 .center_x = self.width // 5 * 4
-        self.detect_sprite_3 .center_y = self.height - 100
+        self.detect_sprite_3 .center_y = self.height - 100 # Создаём спрайты не летяших стрелок игрока
 
         self.all_sprites = arcade.SpriteList()
         self.all_sprites.append(self.detect_sprite_0)
