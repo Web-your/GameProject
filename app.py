@@ -27,13 +27,12 @@ class MainTimer:
         # Запускаем нужную функцию в соответствии со сценой
         if scene == "Defender_Battle":
             setup_defender(self) # Запускаем текущую сцену, обязательно предаём главный таймер
-        if scene == "FlyArrowsMehanic":
-            print("FlyArrowsMehanic")
-        ...
+        else:
+            print(scene)
 
 
 if __name__ == "__main__":
-    window = arcade.Window(1200, 800, "Механика боя Защитника", resizable=False, fullscreen=False)
+    window = arcade.Window(1200, 800, "Механика боя Защитника", resizable=False, fullscreen=True)
     timer = MainTimer(window)
     arcade.run()
 
