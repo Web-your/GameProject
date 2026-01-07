@@ -1,14 +1,14 @@
-""" Name: Максим | Date: 05.01.2026 | WhatYouDo: Сделал механику палочек """
+""" Name: Максим | Date: 07.01.2026 | WhatYouDo: Обновил код для совместимости с основным боем """
 
-# Импорты
 import arcade
 import random
+import sys
+import os
 
 '''Константы'''
-# Настройки окна
-SCREEN_WIDTH = 800
-SCREEN_HEIGHT = 250
-SCREEN_TITLE = "Heal test"
+# Настройки окна мини-игры
+GAME_WIDTH = 800
+GAME_HEIGHT = 250
 
 # Настройка элементов
 STICK_WIDTH = 30
@@ -24,7 +24,7 @@ BACKGROUND_HEIGHT = 120
 
 
 # Палочки
-class healActThingy(arcade.Sprite):
+class HealActThingy(arcade.Sprite):
     def __init__(self, x_offset=0, from_right=False, is_trick=False, is_jumper=False):
         super().__init__()
 
@@ -34,27 +34,33 @@ class healActThingy(arcade.Sprite):
         self.has_jumped_over_field = False
         self.jump_progress = 0
         self.jump_direction = 1
-        self.original_y = SCREEN_HEIGHT // 2
-        self.field_center_x = SCREEN_WIDTH // 2
+        self.original_y = GAME_HEIGHT // 2
+        self.field_center_x = GAME_WIDTH // 2
+
+        # Определяем путь к текстурам относительно текущего файла
+        current_dir = os.path.dirname(os.path.abspath(__file__))
 
         # Загрузка текстур для прыгающих палочек
         if is_jumper:
+            texture_path = os.path.join(current_dir, "healActMoveThingy.png")
             try:
-                self.texture = arcade.load_texture("healActMoveThingy.png")
+                self.texture = arcade.load_texture(texture_path)
             except:
                 self.texture = arcade.make_soft_square_texture(STICK_WIDTH, arcade.color.YELLOW,
                                                                outer_alpha=255)
-        # Закрузка текстур для фальшивых палочек
+        # Загрузка текстур для фальшивых палочек
         elif is_trick:
+            texture_path = os.path.join(current_dir, "healActTrickThingy.png")
             try:
-                self.texture = arcade.load_texture("healActTrickThingy.png")
+                self.texture = arcade.load_texture(texture_path)
             except:
                 self.texture = arcade.make_soft_square_texture(STICK_WIDTH, arcade.color.RED,
                                                                outer_alpha=255)
         # Загрузка текстур для обычных палочек
         else:
+            texture_path = os.path.join(current_dir, "healActThingy.png")
             try:
-                self.texture = arcade.load_texture("healActThingy.png")
+                self.texture = arcade.load_texture(texture_path)
             except:
                 self.texture = arcade.make_soft_square_texture(STICK_WIDTH, arcade.color.WHITE,
                                                                outer_alpha=255)
@@ -63,7 +69,7 @@ class healActThingy(arcade.Sprite):
 
         # Настройка стороны
         if from_right:
-            self.center_x = SCREEN_WIDTH + STICK_WIDTH + x_offset
+            self.center_x = GAME_WIDTH + STICK_WIDTH + x_offset
             self.change_x = -STICK_SPEED
         else:
             self.center_x = -STICK_WIDTH - x_offset
@@ -91,6 +97,7 @@ class healActThingy(arcade.Sprite):
             self.center_x += self.change_x
 
     '''2 класса на реализацию прыжка'''
+
     def start_jump(self):
         if not self.is_jumping and not self.has_jumped_over_field:
             self.is_jumping = True
@@ -132,9 +139,12 @@ class healActThingy(arcade.Sprite):
                 self.center_x += self.change_x * 4
 
 
-class Game(arcade.Window):
-    def __init__(self):
-        super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
+class HealTestView(arcade.View):
+    """Вью для мини-игры Heal Test"""
+
+    def __init__(self, on_complete_callback=None, target_hero_index=0, parent_view=None):
+        super().__init__()
+
         self.stick_list = None
         self.field_list = None
         self.background_list = None
@@ -144,55 +154,80 @@ class Game(arcade.Window):
         self.miss_sound = None
         self.trick_sound = None
 
-        # Подсчёт счёта
-        self.total_sticks = 0
-        self.hit_count = 0
-        self.miss_count = 0
-        self.trick_count = 0
-
         self.background_right_edge = 0
         self.background_left_edge = 0
 
-        self.load_sounds()
+        # Таймер для закрытия окна
+        self.close_timer = 0
+        self.should_close = False
+
+        # Колбэк для возврата в основную игру
+        self.on_complete_callback = on_complete_callback
+
+        # Какого героя лечим
+        self.target_hero_index = target_hero_index
+
+        # Родительское вью для возврата
+        self.parent_view = parent_view
+
+        # Результаты игры
+        self.success_count = 0
+        self.total_sticks = 0
+
         self.setup()
 
-    # Загрузка звуков
-    def load_sounds(self):
-        try:
-            self.hit_sound = arcade.load_sound("healActHit.wav")
-        except:
-            self.hit_sound = arcade.Sound(arcade.resources.sound_laser2)
-
-        try:
-            self.miss_sound = arcade.load_sound("healActMiss.wav")
-        except:
-            self.miss_sound = arcade.Sound(arcade.resources.sound_lose1)
-
-        try:
-            self.trick_sound = arcade.load_sound("healActTrick.wav")
-        except:
-            self.trick_sound = arcade.Sound(arcade.resources.sound_error2)
-
     def setup(self):
+        """Настройка игры"""
         self.stick_list = arcade.SpriteList()
         self.field_list = arcade.SpriteList()
         self.background_list = arcade.SpriteList()
+
+        self.load_sounds()
         self.load_background()
         self.load_interaction_field()
+
+        self.close_timer = 0
+        self.should_close = False
+        self.success_count = 0
         self.total_sticks = 0
-        self.hit_count = 0
-        self.miss_count = 0
-        self.trick_count = 0
-        self.spawn_sticks(from_right=False)
+
+        # Начальный спавн - только 5 обычных палочек слева
+        self.spawn_sticks(from_right=False, is_trick=False, is_jumper=False, count=5)
+
+    # Загрузка звуков
+    def load_sounds(self):
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+
+        try:
+            sound_path = os.path.join(current_dir, "healActHit.wav")
+            self.hit_sound = arcade.load_sound(sound_path)
+        except:
+            # Используем стандартные звуки arcade
+            self.hit_sound = arcade.Sound(":resources:sounds/hit3.wav")
+
+        try:
+            sound_path = os.path.join(current_dir, "healActMiss.wav")
+            self.miss_sound = arcade.load_sound(sound_path)
+        except:
+            self.miss_sound = arcade.Sound(":resources:sounds/error4.wav")
+
+        try:
+            sound_path = os.path.join(current_dir, "healActTrick.wav")
+            self.trick_sound = arcade.load_sound(sound_path)
+        except:
+            self.trick_sound = arcade.Sound(":resources:sounds/error2.wav")
 
     # Фон
     def load_background(self):
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        texture_path = os.path.join(current_dir, "healActField.png")
+
         try:
-            background = arcade.Sprite("healActField.png")
+            background = arcade.Sprite(texture_path)
             background.width = BACKGROUND_WIDTH
             background.height = BACKGROUND_HEIGHT
-            background.center_x = SCREEN_WIDTH // 2
-            background.center_y = SCREEN_HEIGHT // 2
+            background.center_x = GAME_WIDTH // 2
+            background.center_y = GAME_HEIGHT // 2
 
             self.background_left_edge = background.center_x - (background.width / 2)
             self.background_right_edge = background.center_x + (background.width / 2)
@@ -200,12 +235,15 @@ class Game(arcade.Window):
             self.background_list.append(background)
         except:
             self.background_left_edge = 0
-            self.background_right_edge = SCREEN_WIDTH
+            self.background_right_edge = GAME_WIDTH
 
     # Центральная часть
     def load_interaction_field(self):
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        texture_path = os.path.join(current_dir, "healActButton.png")
+
         try:
-            field_sprite = arcade.Sprite("healActButton.png")
+            field_sprite = arcade.Sprite(texture_path)
         except:
             field_sprite = arcade.SpriteSolidColor(FIELD_WIDTH, FIELD_HEIGHT,
                                                    arcade.color.GREEN)
@@ -214,24 +252,17 @@ class Game(arcade.Window):
         scale_h = FIELD_HEIGHT / field_sprite.height
         field_sprite.scale = min(scale_w, scale_h)
 
-        field_sprite.center_x = SCREEN_WIDTH // 2
-        field_sprite.center_y = SCREEN_HEIGHT // 2
+        field_sprite.center_x = GAME_WIDTH // 2
+        field_sprite.center_y = GAME_HEIGHT // 2
 
         self.field_list.append(field_sprite)
 
     # Создание палок с одной стороны
-    def spawn_sticks(self, from_right=False, with_tricks=False, with_jumpers=False):
+    def spawn_sticks(self, from_right=False, is_trick=False, is_jumper=False, count=5):
         x_offset = 0
 
-        for i in range(5):
-            if with_jumpers:
-                is_jumper = random.choice([True, False])
-                is_trick = False if is_jumper else (with_tricks and random.choice([True, False]))
-            else:
-                is_jumper = False
-                is_trick = with_tricks and random.choice([True, False])
-
-            stick = healActThingy(x_offset, from_right, is_trick, is_jumper)
+        for i in range(count):
+            stick = HealActThingy(x_offset, from_right, is_trick, is_jumper)
 
             min_distance = 10
             max_distance = 100
@@ -247,25 +278,15 @@ class Game(arcade.Window):
         else:
             self.stick_list.sort(key=lambda s: s.center_x)
 
-    # Создание палок с разных сторон
-    def spawn_mixed_sticks(self, with_tricks=False, with_jumpers=False):
-        for i in range(5):
-            from_right = random.choice([True, False])
-
-            if with_jumpers:
-                is_jumper = random.choice([True, False])
-                is_trick = False if is_jumper else (with_tricks and random.choice([True, False]))
-            else:
-                is_jumper = False
-                is_trick = with_tricks and random.choice([True, False])
-
-            stick = healActThingy(i * 50, from_right, is_trick, is_jumper)
-
-            self.stick_list.append(stick)
-            self.total_sticks += 1
-
     def on_draw(self):
+        # Очищаем экран черным цветом
         self.clear(arcade.color.BLACK)
+
+        # Позиция мини-игры на экране (по центру)
+        game_x = self.window.width // 2 - GAME_WIDTH // 2
+        game_y = self.window.height // 2 - GAME_HEIGHT // 2
+
+        # Рисуем мини-игру
         self.background_list.draw()
         self.field_list.draw()
         self.stick_list.draw()
@@ -279,11 +300,38 @@ class Game(arcade.Window):
         for stick in sticks_to_remove:
             self.stick_list.remove(stick)
 
+    def check_game_completion(self):
+        """Проверка, все ли палочки обработаны"""
+        if len(self.stick_list) == 0 and not self.should_close:
+            self.should_close = True
+            self.close_timer = 1.0  # 1 секунда до закрытия
+
+    def close_game(self):
+        """Завершение мини-игры и возврат в основную игру"""
+        # Вычисляем эффективность лечения
+        if self.total_sticks > 0:
+            success_rate = self.success_count / self.total_sticks
+        else:
+            success_rate = 0
+
+        # Вызываем колбэк с результатами
+        if self.on_complete_callback:
+            self.on_complete_callback(self.target_hero_index, success_rate, self.success_count)
+
     def on_update(self, delta_time):
+        # Если таймер закрытия активен
+        if self.should_close:
+            self.close_timer -= delta_time
+            if self.close_timer <= 0:
+                self.close_game()
+            return
+
+        # Обновление палочек
         for stick in self.stick_list:
             if stick.active:
                 stick.update(delta_time)
 
+        # Проверка выхода за границы фона
         for stick in self.stick_list:
             if stick.active and not stick.was_hit and not stick.was_missed:
                 if stick.from_right:
@@ -291,11 +339,10 @@ class Game(arcade.Window):
                     if stick_left_edge < self.background_left_edge:
                         if stick.is_trick:
                             stick.was_hit = True
-                            self.hit_count += 1
+                            self.success_count += 1
                             arcade.play_sound(self.hit_sound)
                         else:
                             stick.was_missed = True
-                            self.miss_count += 1
                             arcade.play_sound(self.miss_sound)
                         stick.active = False
                 else:
@@ -303,24 +350,27 @@ class Game(arcade.Window):
                     if stick_right_edge > self.background_right_edge:
                         if stick.is_trick:
                             stick.was_hit = True
-                            self.hit_count += 1
+                            self.success_count += 1
                             arcade.play_sound(self.hit_sound)
                         else:
                             stick.was_missed = True
-                            self.miss_count += 1
                             arcade.play_sound(self.miss_sound)
                         stick.active = False
 
         self.clean_inactive_sticks()
 
+        # Удаление палочек за пределами экрана
         for stick in self.stick_list:
             if (stick.from_right and stick.center_x < -STICK_WIDTH) or \
-                    (not stick.from_right and stick.center_x > SCREEN_WIDTH + STICK_WIDTH):
+                    (not stick.from_right and stick.center_x > GAME_WIDTH + STICK_WIDTH):
                 stick.active = False
+
+        # Проверка завершения игры
+        self.check_game_completion()
 
     # Обработка нажатия
     def on_key_press(self, key, modifiers):
-        if key == arcade.key.SPACE:
+        if key == arcade.key.SPACE and not self.should_close:
             for stick in self.stick_list:
                 if stick.active and not stick.was_hit and not stick.was_missed:
                     if stick.is_jumper and stick.is_jumping:
@@ -331,21 +381,10 @@ class Game(arcade.Window):
                         if field.collides_with_sprite(stick):
                             if stick.is_trick:  # =)
                                 stick.was_hit = True
-                                self.trick_count += 1
                                 arcade.play_sound(self.trick_sound)
                             else:
                                 stick.was_hit = True
-                                self.hit_count += 1
+                                self.success_count += 1
                                 arcade.play_sound(self.hit_sound)
                             stick.active = False
                             break
-
-
-'''Тут идёт блок main и т.п.'''
-def main():
-    window = Game()
-    arcade.run()
-
-
-if __name__ == "__main__":
-    main()
