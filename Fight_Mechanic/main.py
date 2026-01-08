@@ -200,28 +200,28 @@ class Interface:
     def load_textures(self):
         texture_info = {
             'ATK_icon': {
-                'normal': 'Interface_view/ATK_icon.png',
-                'active': 'Interface_view/ATK_act_icon.png',
+                'normal': 'Fight_Mechanic/Static/Interface_Textures/ATK_icon.png',
+                'active': 'Fight_Mechanic/Static/Interface_Textures/ATK_act_icon.png',
                 'color': arcade.color.RED
             },
             'DEF_icon': {
-                'normal': 'Interface_view/DEF_icon.png',
-                'active': 'Interface_view/DEF_act_icon.png',
+                'normal': 'Fight_Mechanic/Static/Interface_Textures/DEF_icon.png',
+                'active': 'Fight_Mechanic/Static/Interface_Textures/DEF_act_icon.png',
                 'color': arcade.color.BLUE
             },
             'HEAL_icon': {
-                'normal': 'Interface_view/HEAL_icon.png',
-                'active': 'Interface_view/HEAL_act_icon.png',
+                'normal': 'Fight_Mechanic/Static/Interface_Textures/HEAL_icon.png',
+                'active': 'Fight_Mechanic/Static/Interface_Textures/HEAL_act_icon.png',
                 'color': arcade.color.GREEN
             },
             'ITEM_icon': {
-                'normal': 'Interface_view/ITEM_icon.png',
-                'active': 'Interface_view/ITEM_act_icon.png',
+                'normal': 'Fight_Mechanic/Static/Interface_Textures/ITEM_icon.png',
+                'active': 'Fight_Mechanic/Static/Interface_Textures/ITEM_act_icon.png',
                 'color': arcade.color.PURPLE
             },
             'something_icon': {
-                'normal': 'Interface_view/something_icon.png',
-                'active': 'Interface_view/something_act_icon.png',
+                'normal': 'Fight_Mechanic/Static/Interface_Textures/something_icon.png',
+                'active': 'Fight_Mechanic/Static/Interface_Textures/something_act_icon.png',
                 'color': arcade.color.ORANGE
             },
             'icon_circle': {
