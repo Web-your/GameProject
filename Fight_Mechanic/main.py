@@ -6,7 +6,7 @@ import arcade
 # Импортируем функции для запуска мини-игр
 from Defender_Battle.main import setup_defender
 from healFlySticksMechanic.healAct import setup_heal
-
+from FlyArrowsMehanic.FlyArrows import setup_attack
 
 # Константы для интерфейса
 MAIN_PANEL_WIDTH = 960
@@ -15,50 +15,6 @@ BUTTON_WIDTH = 50
 BUTTON_HEIGHT = 50
 PANEL_MARGIN = 10
 ELEMENT_MARGIN = 3
-
-
-
-# Примеры реализации объектов из других файлов
-# <-------------------------------------------------------------------------------------------------------------------
-
-# Окно для атаки
-class AttackView(arcade.View):
-    def __init__(self, main_scene_manager):
-        super().__init__()
-        self.main_scene_manager = main_scene_manager
-        self.text = "Атака"
-
-    def setup(self):
-        ...
-
-    def on_show(self):
-        ...
-
-    def on_update(self, delta_time):
-        ...
-
-    def on_draw(self):
-        self.clear()
-        arcade.draw_text(
-            self.text,
-            self.center_x,
-            self.center_y,
-            arcade.color.WHITE,
-            40
-        )
-
-    def on_key_press(self, key, modifiers):
-        if key == arcade.key.SPACE:
-            self.back_to_menu()
-
-    def back_to_menu(self):
-        self.main_scene_manager.next_scene()
-
-
-# Функция для запуска атаки
-def attack_setup(main_scene_manager, *settings):
-    attack_view = AttackView(main_scene_manager)
-    main_scene_manager.window.show_view(attack_view)
 
 
 
@@ -77,7 +33,7 @@ class SceneManager:
         self.window = fight_box.window
 
         # Добавляем сцены в очередь: каждая сцена - функция, которая запускает механику мини-битвы
-        self.scenes = [menu_setup, attack_setup, setup_defender, setup_heal]
+        self.scenes = [menu_setup, setup_attack, setup_defender, setup_heal]
         self.curr_scene_index = 0 # Индекс текущей сцены в очереди
 
     def setup(self):

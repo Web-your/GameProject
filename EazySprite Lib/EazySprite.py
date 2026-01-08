@@ -2,9 +2,9 @@ from PIL import Image
 import arcade
 import io
 
-class EasySprite():
+class EasySprite:
     @staticmethod
-    def upscale_image( filename, scale):
+    def upscale_image(filename, scale):
         img = Image.open(filename)
         scale_factor = scale
         new_size = (img.width * scale_factor, img.height * scale_factor)
@@ -26,7 +26,7 @@ class EasySprite():
         texture = arcade.load_texture(img_bytes)
         return texture
 
-    class Animate():
+    class Animate:
         def __init__(self, sprite_file=None, step=32, fps=1, automatic=None):
             if sprite_file is None:
                 self.lst_img_texture = []

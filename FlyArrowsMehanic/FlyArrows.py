@@ -1,20 +1,21 @@
 """ Name: Юрий, Date: 03.01.2026, WhatYouDo: сделал механику стрелочек"""
+# Name: Иван, Date: 09.01.2026, WhatYouDo: добавил функции stop и setup_attack, обновил пути к текстурам
+
 import arcade
-from arcade.types import Color
 from pyglet.graphics import Batch
 
-SCREEN_WIDTH = 500
-SCREEN_HEIGHT = 600
-SCREEN_TITLE = "Flying arrows"
 
-class MyGame(arcade.Window):
-    def __init__(self, width, height, title, side, color):
-        super().__init__(width, height, title)
+class AttackView(arcade.View):
+    def __init__(self, main_scene_manager):
+        super().__init__()
+        self.main_scene_manager = main_scene_manager
         arcade.set_background_color(arcade.color.BLACK)
-        self.width = width
-        self.height = height
+        self.setup2()
 
     def setup(self):
+        ...
+
+    def setup2(self):
         self.arrows = [[0, 1, 2], [1, 2, 1], [2, 3, 1], [3, 4, 1], [2, 5, 4], [0, 4, 1]] # создаём или передаём массив стрелок
         ### Первое число в массиве стрелок направление 0-влево, 1-вверх, 2-вправо, 3-вниз
         # Второе число это номер цикла###
@@ -23,7 +24,6 @@ class MyGame(arcade.Window):
         self.speed = 400
         self.count = 0
         self.time_stop = max(self.arrows, key=lambda x: x[1])[1] * self.cycle_time + 4 + (200 / self.speed)
-        print(self.time_stop)
         self.arrows_0 = set()
         self.arrows_1 = set()
         self.arrows_2 = set()
@@ -38,10 +38,10 @@ class MyGame(arcade.Window):
             elif index == 3:
                 self.arrows_3.add((tcycle * self.cycle_time + 2, tarrow))
 
-        self.detect_sprite_0 = arcade.Sprite("detect_arrow0.png", scale=0.5)
-        self.detect_sprite_1 = arcade.Sprite("detect_arrow1.png", scale=0.5)
-        self.detect_sprite_2 = arcade.Sprite("detect_arrow2.png", scale=0.5)
-        self.detect_sprite_3 = arcade.Sprite("detect_arrow3.png", scale=0.5)
+        self.detect_sprite_0 = arcade.Sprite("FlyArrowsMehanic/detect_arrow0.png", scale=0.5)
+        self.detect_sprite_1 = arcade.Sprite("FlyArrowsMehanic/detect_arrow1.png", scale=0.5)
+        self.detect_sprite_2 = arcade.Sprite("FlyArrowsMehanic/detect_arrow2.png", scale=0.5)
+        self.detect_sprite_3 = arcade.Sprite("FlyArrowsMehanic/detect_arrow3.png", scale=0.5)
         self.detect_sprite_0.center_x = self.width // 5
         self.detect_sprite_0.center_y = self.height - 100
         self.detect_sprite_1.center_x = self.width // 5 * 2
@@ -79,8 +79,10 @@ class MyGame(arcade.Window):
     def on_update(self, delta_time):
         """Этот метод отвечает за обновление логики игры (анимации, взаимодействия и т. д.)"""
         self.total_time += delta_time
+
         if self.total_time >= self.time_stop:
-            self.close()
+            self.stop()
+
         self.fly_arrows()
         self.fly_arrows_vid(delta_time)
         if arcade.key.LEFT in self.keys_pressed or arcade.key.A in self.keys_pressed:
@@ -210,7 +212,13 @@ class MyGame(arcade.Window):
             self.keys_released_3 = None
 
     def fly_arrows(self):
-        dct_index = {0: "arrow0.png", 1: "arrow1.png", 2: "arrow2.png", 3: "arrow3.png"}
+        dct_index = {
+            0: "FlyArrowsMehanic/arrow0.png",
+            1: "FlyArrowsMehanic/arrow1.png",
+            2: "FlyArrowsMehanic/arrow2.png",
+            3: "FlyArrowsMehanic/arrow3.png"
+        }
+
         for i, item in enumerate(self.arrows):
             index, tcycle, tarrow = item
             if self.total_time - 2 >= tcycle * self.cycle_time - (400/self.speed) and tarrow <= 1:
@@ -234,48 +242,48 @@ class MyGame(arcade.Window):
                 if index == 0:
                     player_sprite.center_x = self.width // 5
                     player_sprite.center_y = self.height - 500
-                    dop_sprite = arcade.Sprite("ArrowAddEnd.png", scale=0.5)
+                    dop_sprite = arcade.Sprite("FlyArrowsMehanic/ArrowAddEnd.png", scale=0.5)
                     dop_sprite.center_x = self.width // 5
                     dop_sprite.center_y = self.height - 500 - (tarrow - 1) * self.cycle_time * self.speed
                     self.all_arrow_sprites.append(dop_sprite)
                     for j in range(int((self.cycle_time * self.speed / 20) * (tarrow - 1))):
-                        dop_sprite = arcade.Sprite("ArrowAdd.png", scale=0.5)
+                        dop_sprite = arcade.Sprite("FlyArrowsMehanic/ArrowAdd.png", scale=0.5)
                         dop_sprite.center_x = self.width // 5
                         dop_sprite.center_y = self.height - 500 - ((j + 1) * 20)
                         self.all_arrow_sprites.append(dop_sprite)
                 elif index == 1:
                     player_sprite.center_x = self.width // 5 * 2
                     player_sprite.center_y = self.height - 500
-                    dop_sprite = arcade.Sprite("ArrowAddEnd.png", scale=0.5)
+                    dop_sprite = arcade.Sprite("FlyArrowsMehanic/ArrowAddEnd.png", scale=0.5)
                     dop_sprite.center_x = self.width // 5 * 2
                     dop_sprite.center_y = self.height - 500 - (tarrow - 1) * self.cycle_time * self.speed
                     self.all_arrow_sprites.append(dop_sprite)
                     for j in range(int((self.cycle_time * self.speed / 20) * (tarrow - 1))):
-                        dop_sprite = arcade.Sprite("ArrowAdd.png", scale=0.5)
+                        dop_sprite = arcade.Sprite("FlyArrowsMehanic/ArrowAdd.png", scale=0.5)
                         dop_sprite.center_x = self.width // 5 * 2
                         dop_sprite.center_y = self.height - 500 - ((j + 1) * 20)
                         self.all_arrow_sprites.append(dop_sprite)
                 elif index == 2:
                     player_sprite.center_x = self.width // 5 * 3
                     player_sprite.center_y = self.height - 500
-                    dop_sprite = arcade.Sprite("ArrowAddEnd.png", scale=0.5)
+                    dop_sprite = arcade.Sprite("FlyArrowsMehanic/ArrowAddEnd.png", scale=0.5)
                     dop_sprite.center_x = self.width // 5 * 3
                     dop_sprite.center_y = self.height - 500 - (tarrow - 1) * self.cycle_time * self.speed
                     self.all_arrow_sprites.append(dop_sprite)
                     for j in range(int((self.cycle_time * self.speed / 20) * (tarrow - 1))):
-                        dop_sprite = arcade.Sprite("ArrowAdd.png", scale=0.5)
+                        dop_sprite = arcade.Sprite("FlyArrowsMehanic/ArrowAdd.png", scale=0.5)
                         dop_sprite.center_x = self.width // 5 * 3
                         dop_sprite.center_y = self.height - 500 - ((j + 1) * 20)
                         self.all_arrow_sprites.append(dop_sprite)
                 elif index == 3:
                     player_sprite.center_x = self.width // 5 * 4
                     player_sprite.center_y = self.height - 500
-                    dop_sprite = arcade.Sprite("ArrowAddEnd.png", scale=0.5)
+                    dop_sprite = arcade.Sprite("FlyArrowsMehanic/ArrowAddEnd.png", scale=0.5)
                     dop_sprite.center_x = self.width // 5 * 4
                     dop_sprite.center_y = self.height - 500 - (tarrow - 1) * self.cycle_time * self.speed
                     self.all_arrow_sprites.append(dop_sprite)
                     for j in range(int((self.cycle_time * self.speed / 20) * (tarrow - 1))):
-                        dop_sprite = arcade.Sprite("ArrowAdd.png", scale=0.5)
+                        dop_sprite = arcade.Sprite("FlyArrowsMehanic/ArrowAdd.png", scale=0.5)
                         dop_sprite.center_x = self.width // 5 * 4
                         dop_sprite.center_y = self.height - 500 - ((j + 1) * 20)
                         self.all_arrow_sprites.append(dop_sprite)
@@ -288,18 +296,12 @@ class MyGame(arcade.Window):
             if arrow.center_y > 800:
                 self.all_arrow_sprites.pop(i)
 
+    # Функция для выхода из мини-боя
+    def stop(self):
+        self.main_scene_manager.next_scene()
 
 
-def setup_game(width=900, height=600, title="Flying arrows", side=100, color="#ff40ff"):
-    game = MyGame(width, height, title, side, color)
-    game.setup()
-    return game
-
-
-def main():
-    setup_game(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
-    arcade.run()
-
-
-if __name__ == "__main__":
-    main()
+# Функция для запуска мини-боёвки атаки
+def setup_attack(main_scene_manager, *settings):
+    attack_view = AttackView(main_scene_manager)
+    main_scene_manager.window.show_view(attack_view)
