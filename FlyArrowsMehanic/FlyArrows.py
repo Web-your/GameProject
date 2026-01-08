@@ -22,6 +22,8 @@ class MyGame(arcade.Window):
         self.total_time = 0.0
         self.speed = 400
         self.count = 0
+        self.time_stop = max(self.arrows, key=lambda x: x[1])[1] * self.cycle_time + 4 + (200 / self.speed)
+        print(self.time_stop)
         self.arrows_0 = set()
         self.arrows_1 = set()
         self.arrows_2 = set()
@@ -77,6 +79,8 @@ class MyGame(arcade.Window):
     def on_update(self, delta_time):
         """Этот метод отвечает за обновление логики игры (анимации, взаимодействия и т. д.)"""
         self.total_time += delta_time
+        if self.total_time >= self.time_stop:
+            self.close()
         self.fly_arrows()
         self.fly_arrows_vid(delta_time)
         if arcade.key.LEFT in self.keys_pressed or arcade.key.A in self.keys_pressed:
