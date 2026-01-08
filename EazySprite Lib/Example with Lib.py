@@ -122,6 +122,8 @@ class MyGame(arcade.Window):
 
     def setup(self):
         heart_sprite_upscale = arcade.Sprite(EasySprite.upscale_image("Heart.png", 10)) # Моё увеличение
+        # upscale_image() нужно для увеличения изображения
+        # А если вы хотите увеличить ещё раз результат upscale_image или текстуру из анимации используйте upscale_texture()
         heart_sprite_upscale.center_x = self.width // 3
         heart_sprite_upscale.center_y = self.height // 2
 
