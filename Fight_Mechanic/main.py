@@ -1,18 +1,17 @@
+# Name: Иван, Date: 08.01.2026, WhatYouDo: создал файл для реализации общей боёвки, определил структуру кода
+
 import arcade
+
+# Импортируем функции для запуска мини-игр
+from Defender_Battle.main import setup_defender
+from healFlySticksMechanic.healAct import setup_heal
 
 
 
 # Примеры реализации объектов из других файлов
 # <-------------------------------------------------------------------------------------------------------------------
 
-# Предыдущий менеджер сцен для запуска различных полноценных битв, хождений по миру и диалогов с персонажами
-class MainSceneManager:
-    def __init__(self, window):
-        self.window = window
-        setup_fight(self)
-
-
-# Примеры окон - мини-игр
+# Окно для атаки
 class AttackView(arcade.View):
     def __init__(self, main_scene_manager):
         super().__init__()
@@ -46,98 +45,20 @@ class AttackView(arcade.View):
         self.main_scene_manager.next_scene()
 
 
-class DefenderView(arcade.View):
-    def __init__(self, main_scene_manager):
-        super().__init__()
-        self.main_scene_manager = main_scene_manager
-        self.window = main_scene_manager.window
-
-        self.text = "Защита"
-
-    def setup(self):
-        ...
-
-    def on_show(self):
-        ...
-
-    def on_update(self, delta_time):
-        ...
-
-    def on_draw(self):
-        self.clear()
-        arcade.draw_text(
-            self.text,
-            self.center_x,
-            self.center_y,
-            arcade.color.WHITE,
-            40
-        )
-
-    def on_key_press(self, key, modifiers):
-        if key == arcade.key.SPACE:
-            self.back_to_menu()
-
-    def back_to_menu(self):
-        self.main_scene_manager.next_scene()
-
-
-class HealView(arcade.View):
-    def __init__(self, main_scene_manager):
-        super().__init__()
-        self.main_scene_manager = main_scene_manager
-        self.window = main_scene_manager.window
-
-        self.text = "Лечение"
-
-    def setup(self):
-        ...
-
-    def on_show(self):
-        ...
-
-    def on_update(self, delta_time):
-        ...
-
-    def on_draw(self):
-        self.clear()
-        arcade.draw_text(
-            self.text,
-            self.center_x,
-            self.center_y,
-            arcade.color.WHITE,
-            40
-        )
-
-    def on_key_press(self, key, modifiers):
-        if key == arcade.key.SPACE:
-            self.back_to_menu()
-
-    def back_to_menu(self):
-        self.main_scene_manager.next_scene()
-
-
-# Пример функций - мини-игр
+# Функция для запуска атаки
 def attack_setup(main_scene_manager, *settings):
     attack_view = AttackView(main_scene_manager)
     main_scene_manager.window.show_view(attack_view)
 
 
-def defender_setup(main_scene_manager, *settings):
-    defender_view = DefenderView(main_scene_manager)
-    main_scene_manager.window.show_view(defender_view)
-
-
-def heal_setup(main_scene_manager, *settings):
-    heal_view = HealView(main_scene_manager)
-    main_scene_manager.window.show_view(heal_view)
-
-
-def menu_setup(main_scene_manager, *settings):
-    main_scene_manager.window.show_view(main_scene_manager.fight_box.menu_view)
-
 
 # Динамические объекты
 # <-------------------------------------------------------------------------------------------------------------------
+
+# Функция для переключения на меню
+def menu_setup(scene_manager, *settings):
+    scene_manager.window.show_view(scene_manager.fight_box.menu_view)
+
 
 # Переключается меду сценами, окнами и мини-играми
 class SceneManager:
@@ -146,17 +67,23 @@ class SceneManager:
         self.window = fight_box.window
 
         # Добавляем сцены в очередь: каждая сцена - функция, которая запускает механику мини-битвы
-        self.scenes = [menu_setup, attack_setup, defender_setup, heal_setup]
+        self.scenes = [menu_setup, attack_setup, setup_defender, setup_heal]
         self.curr_scene_index = 0 # Индекс текущей сцены в очереди
 
+    def setup(self):
+        self.curr_scene_index = 0
         self.next_scene()
 
     # Запускаем следующую сцену
-    def next_scene(self):
+    def next_scene(self, *args):
         func = self.scenes[self.curr_scene_index]
         if self.curr_scene_index != 0:
             self.curr_scene_index = 0  # Возвращаемся на меню после мини-боя
         func(self)  # Передаём себя, чтобы вернуться и запустить следующую сцену
+
+    # Выходим из боёвки
+    def back(self):
+        ...
 
 
 # Окно отрисовки меню
@@ -209,22 +136,36 @@ class MenuView(arcade.View):
         self.scene_manager.next_scene()
 
 
+
 # Статичные объекты и спрайты
 # <-------------------------------------------------------------------------------------------------------------------
 
-# Задний фон, анимация фона, персонажи, враги
+# Задний фон, анимация фона, персонажи, враги - только отрисовка
 class Background:
     def __init__(self):
         ...
 
+    # Для отрисовки фоновых объектов
     def draw(self):
         ...
 
 
-# Интерфейс, кнопки выбора действия, аура
+# Интерфейс, кнопки выбора действия, аура - отрисовка и механика
 class Interface:
     def __init__(self):
         ...
+
+    # Для отрисовки интерфейса
+    def draw(self):
+        ...
+
+
+# Реализация механики персонажей - здоровье, действие, предметы - только механика, отрисовка в Background
+class HeroMechanic:
+    def __init__(self):
+        self.health = 100 # Здоровье
+        self.is_in_fight = False # Участвует ли в мини-бое в данный момент
+        self.attributes = [] # Предметы в инвенторе
 
 
 
@@ -237,20 +178,15 @@ class FightBox:
         self.main_scene_manager = main_scene_manager # Ссылка на предыдущий менеджер сцен
         self.window = main_scene_manager.window # Ссылка на окно
 
+        self.scene_manager = SceneManager(self)  # Собственный менеджер сцен
         self.menu_view = MenuView(self)  # Окно отрисовки меню
-        self.scene_manager = SceneManager(self) # Собственный менеджер сцен
+
+        self.scene_manager.setup()
 
 
 # Функция для запуска общей битвы
 def setup_fight(main_scene_manager):
     FightBox(main_scene_manager)
-
-
-# Пример функции для запуска всей программы
-if __name__ == "__main__":
-    window = arcade.Window(1000, 800, "Общая битва", resizable=False, fullscreen=False)
-    main_scene_manager = MainSceneManager(window)
-    arcade.run()
 
 
 

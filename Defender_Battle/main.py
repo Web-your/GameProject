@@ -8,8 +8,9 @@ import random
 import math
 
 
+
 # Таймер (Динамический) - обновляет волны и окна --------------------------------------------------------------------->
-class Timer:
+class SceneManager:
     def __init__(self, defender):
         self.df = defender
 
@@ -28,12 +29,18 @@ class Timer:
     def next(self, delta_time=0):
         # Получаем сцену и обновляем индекс в очереди
         if self.curr_index >= len(self.timeline):
-            # В конце выходим и запускаем следующий бой в главном таймере
-            self.df.main_timer.next()
+            # В конце выходим из мини-игры
+            self.back()
         else:
             scene = self.timeline[self.curr_index]
             self.curr_index += 1
             scene.setup() # Запускаем текущую сцену
+
+    # Выходим из боёвки
+    def back(self):
+        # Запускаем следующий бой в главном менеджере сцен
+        self.df.main_scene_manager.next_scene()
+
 
 
 # Сцены (динамические) --------------------------------------------------------------------->
@@ -55,7 +62,7 @@ class StartScene:
         if countdown.curr_index >= len(countdown.textures):
             countdown.curr_index = 0
             # По завершении запускаем следующую сцену в таймере
-            self.df.timer.next()
+            self.df.scene_manager.next()
         else:
             # Сменяем текстуру обратного отсчёта на следующую
             countdown.texture = countdown.textures[countdown.curr_index]
@@ -77,7 +84,7 @@ class WaveScene:
         self.bullet_mech = BulletMechanic(self.df)
         self.cristal_mech = CristalMechanic(self.df)
 
-        self.wave_time = 54 # Время волны
+        self.wave_time = 20 # Время волны
         self.pause1_time = 1.5 # Время после последнего воспламенения, когда активны спрайты
         self.pause2_time = 1.5 # Время до финиша, когда спрайты не активны
 
@@ -107,14 +114,14 @@ class WaveScene:
     def next_scene(self, delta_time=0):
         arcade.unschedule(self.next_scene)
         arcade.stop_sound(self.player_music)
-        self.df.timer.next()
+        self.df.scene_manager.next()
 
 
-# Сцена в крнце боя
+# Сцена в конце боя
 class FinishScene:
     def __init__(self, defender):
         self.df = defender
-        self.finish_time = 2 # Время сцены
+        self.finish_time = 1 # Время сцены
 
     def setup(self):
         self.df.window.show_view(self.df.finish_view) # Включаем нужное окно
@@ -124,7 +131,8 @@ class FinishScene:
 
     def next_scene(self, delta_time=0):
         arcade.unschedule(self.next_scene)
-        self.df.timer.next()
+        self.df.scene_manager.next()
+
 
 
 #Реализация основных механик (динамические) --------------------------------------------------------------------->
@@ -275,6 +283,7 @@ class CristalMechanic:
         self.is_active = False
 
 
+
 # Окна (динамические) --------------------------------------------------------------------->
 # Здесь прописываем, какие объекты отрисовывать и обновлять
 class StartView(arcade.View):
@@ -364,6 +373,7 @@ class FinishView(arcade.View):
         df.background.draw()
         df.board.draw()
         df.finish_list.draw()
+
 
 
 # Объекты и спрайты (статичные) --------------------------------------------------------------------->
@@ -713,15 +723,16 @@ class AttackCristal(arcade.Sprite):
                 self.remove_from_sprite_lists()
 
 
+
 # <--------------------------------------------------------------------->
-# Defender - содержит все окна, сцены, спрайты и прочие объекты, к которым можно обратиться
+# DefenderBox - содержит все окна, сцены, спрайты и прочие объекты, к которым можно обратиться
 # Передаёт себя всем объектам, чтобы они имели связь друг с другом
-class Defender:
-    def __init__(self, main_timer):
-        # Обязательно передаём главный таймер всей игры, чтобы в конце выйти и запустить следующий бой
-        self.main_timer = main_timer
+class DefenderBox:
+    def __init__(self, main_scene_manager):
+        # Обязательно передаём главный менеджер сцен общего боя, чтобы в конце выйти и запустить следующий бой
+        self.main_scene_manager = main_scene_manager
         # Обязательно получаем основное окно при создании, чтобы переключаться между сценами
-        self.window = main_timer.window
+        self.window = main_scene_manager.window
 
         # Параметры окна
         self.width = self.window.width
@@ -796,8 +807,8 @@ class Defender:
         self.wave_view = WaveView(self)
         self.finish_view = FinishView(self)
 
-        # Таймер (динамический) - обновляет волны и окна
-        self.timer = Timer(self)
+        # Собственный менеджер сцен (динамический) - обновляет волны и окна
+        self.scene_manager = SceneManager(self)
 
     # Обновляет текст счёта
     def update_score_text(self):
@@ -805,5 +816,6 @@ class Defender:
         self.health_lose_text.text = f"Здоровья потеряно -{self.health_lose}"
 
 
-def setup_defender(timer):
-    Defender(timer)
+# Функция для запуска мини-игры защитника
+def setup_defender(main_scene_manager):
+    DefenderBox(main_scene_manager)

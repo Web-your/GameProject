@@ -1,43 +1,24 @@
-# """ Name: Иван, Date: 05.01.2026, WhatYouDo: пример объединения игры"""
+# Name: Иван, Date: 08.01.2026, WhatYouDo: создал файл для запуска всей игры
+
 import arcade
+from Fight_Mechanic.main import setup_fight
 
-from Defender_Battle.main import setup_defender
 
-
-# Пример, как можно объединить все бои и механики
-class MainTimer:
+# Менеджер сцен для управления битвами, перемещением героев, диалогами и т.д.
+class SceneManager:
     def __init__(self, window):
         self.window = window
 
-        # Список сцен, боёв, механик
-        self.scenes = ["Defender_Battle", "FlyArrowsMehanic", "Lines", "Persons_Dialogs", "Menu"]
-        # Текущая сцена
-        self.curr_index = 0
-
-        # Вызываем следующую сцену
-        self.next()
-
-    def next(self):
-        # Получаем сцену текущую
-        scene = self.scenes[self.curr_index]
-
-        # Обновляем индекс в списке так, как это надо (Или не обновляем вовсе)
-        self.curr_index += 1
-
-        # Запускаем нужную функцию в соответствии со сценой
-        if scene == "Defender_Battle":
-            setup_defender(self) # Запускаем текущую сцену, обязательно предаём главный таймер
-        else:
-            print(scene)
+    def setup(self):
+        # Начинаем одну полноценную боёвку
+        setup_fight(self)
 
 
 if __name__ == "__main__":
-    window = arcade.Window(1200, 800, "Механика боя Защитника", resizable=False, fullscreen=True)
-    timer = MainTimer(window)
+    main_window = arcade.Window(1000, 800, "Общая битва", resizable=False, fullscreen=False)
+    scene_manager = SceneManager(main_window)
+    scene_manager.setup()
     arcade.run()
 
-"""
-Чтобы начать бой, импортируем и запускаем функцию setup_defender
-Она создаст временный объект Defender
-При инициализации Defender автоматом переключится на новое окно боя
-"""
+
+"""Описание - файл для запуска всей игры"""

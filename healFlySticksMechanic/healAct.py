@@ -1,4 +1,5 @@
 """ Name: Максим | Date: 07.01.2026 | WhatYouDo: Обновил код для совместимости с основным боем """
+# Name: Иван, Date: 08.01.2026, WhatYouDo: Добавил функцию setup_heal для запуска мини-боя лечения
 
 import arcade
 import random
@@ -388,3 +389,8 @@ class HealTestView(arcade.View):
                                 arcade.play_sound(self.hit_sound)
                             stick.active = False
                             break
+
+
+def setup_heal(main_scene_manager, *settings):
+    heal_view = HealTestView(on_complete_callback=main_scene_manager.next_scene)
+    main_scene_manager.window.show_view(heal_view)
