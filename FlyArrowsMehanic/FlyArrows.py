@@ -48,13 +48,13 @@ class AttackView(arcade.View):
         self.detect_sprite_2 = arcade.Sprite("FlyArrowsMehanic/detect_arrow2.png", scale=0.5)
         self.detect_sprite_3 = arcade.Sprite("FlyArrowsMehanic/detect_arrow3.png", scale=0.5)
         self.detect_sprite_0.center_x = self.mini_window.x + self.mini_window.width // 5
-        self.detect_sprite_0.center_y = self.mini_window.y + self.mini_window.height - 50
+        self.detect_sprite_0.center_y = self.mini_window.y + self.mini_window.height - 100
         self.detect_sprite_1.center_x = self.mini_window.x + self.mini_window.width // 5 * 2
-        self.detect_sprite_1.center_y = self.mini_window.y + self.mini_window.height - 50
+        self.detect_sprite_1.center_y = self.mini_window.y + self.mini_window.height - 100
         self.detect_sprite_2.center_x = self.mini_window.x + self.mini_window.width // 5 * 3
-        self.detect_sprite_2.center_y = self.mini_window.y + self.mini_window.height - 50
+        self.detect_sprite_2.center_y = self.mini_window.y + self.mini_window.height - 100
         self.detect_sprite_3 .center_x = self.mini_window.x + self.mini_window.width // 5 * 4
-        self.detect_sprite_3 .center_y = self.mini_window.y + self.mini_window.height - 50
+        self.detect_sprite_3 .center_y = self.mini_window.y + self.mini_window.height - 100
 
         self.all_sprites = arcade.SpriteList()
         self.all_sprites.append(self.detect_sprite_0)
@@ -79,6 +79,14 @@ class AttackView(arcade.View):
         self.clear()
         fb = self.fight_box
 
+        self.all_arrow_sprites.draw()
+        arcade.draw_lbwh_rectangle_filled(self.mini_window.x, 0, self.mini_window.width, self.mini_window.y,
+                                          arcade.color.BLACK)
+        arcade.draw_lbwh_rectangle_filled(self.mini_window.x, self.mini_window.height + 80, self.mini_window.width,
+                                          self.height - self.mini_window.height + 60,
+                                          arcade.color.BLACK)
+        self.all_sprites.draw()
+
         arcade.draw_lbwh_rectangle_outline(
             self.mini_window.x,
             self.mini_window.y,
@@ -87,9 +95,6 @@ class AttackView(arcade.View):
             arcade.color.WHITE,
             5
         )
-
-        self.all_arrow_sprites.draw()
-        self.all_sprites.draw()
 
         fb.health_bar_list.draw()
 
@@ -232,67 +237,67 @@ class AttackView(arcade.View):
                 player_sprite = arcade.Sprite(dct_index[index], scale=0.5)
                 if index == 0:
                     player_sprite.center_x = self.mini_window.x + self.mini_window.width // 5
-                    player_sprite.center_y = self.mini_window.y + self.mini_window.height - 450
+                    player_sprite.center_y = self.mini_window.y + self.mini_window.height - 500
                 elif index == 1:
                     player_sprite.center_x = self.mini_window.x + self.mini_window.width // 5 * 2
-                    player_sprite.center_y = self.mini_window.y + self.mini_window.height - 450
+                    player_sprite.center_y = self.mini_window.y + self.mini_window.height - 500
                 elif index == 2:
                     player_sprite.center_x = self.mini_window.x + self.mini_window.width // 5 * 3
-                    player_sprite.center_y = self.mini_window.y + self.mini_window.height - 450
+                    player_sprite.center_y = self.mini_window.y + self.mini_window.height - 500
                 elif index == 3:
                     player_sprite.center_x = self.mini_window.x + self.mini_window.width // 5 * 4
-                    player_sprite.center_y = self.mini_window.y + self.mini_window.height - 450
+                    player_sprite.center_y = self.mini_window.y + self.mini_window.height - 500
                 self.all_arrow_sprites.append(player_sprite)
                 del self.arrows[i]
             elif self.total_time - 2 >= tcycle * self.cycle_time - (400/self.speed) and tarrow > 1:
                 player_sprite = arcade.Sprite(dct_index[index], scale=0.5)
                 if index == 0:
                     player_sprite.center_x = self.mini_window.x + self.mini_window.width // 5
-                    player_sprite.center_y = self.mini_window.y + self.mini_window.height - 450
+                    player_sprite.center_y = self.mini_window.y + self.mini_window.height - 500
                     dop_sprite = arcade.Sprite("FlyArrowsMehanic/ArrowAddEnd.png", scale=0.5)
                     dop_sprite.center_x = self.mini_window.x + self.mini_window.width // 5
-                    dop_sprite.center_y = self.mini_window.y + self.mini_window.height - 450 - (tarrow - 1) * self.cycle_time * self.speed
+                    dop_sprite.center_y = self.mini_window.y + self.mini_window.height - 500 - (tarrow - 1) * self.cycle_time * self.speed
                     self.all_arrow_sprites.append(dop_sprite)
                     for j in range(int((self.cycle_time * self.speed / 20) * (tarrow - 1))):
                         dop_sprite = arcade.Sprite("FlyArrowsMehanic/ArrowAdd.png", scale=0.5)
                         dop_sprite.center_x = self.mini_window.x + self.mini_window.width // 5
-                        dop_sprite.center_y = self.mini_window.y + self.mini_window.height - 450 - ((j + 1) * 20)
+                        dop_sprite.center_y = self.mini_window.y + self.mini_window.height - 500 - ((j + 1) * 20)
                         self.all_arrow_sprites.append(dop_sprite)
                 elif index == 1:
                     player_sprite.center_x = self.mini_window.x + self.mini_window.width // 5 * 2
-                    player_sprite.center_y = self.mini_window.y + self.mini_window.height - 450
+                    player_sprite.center_y = self.mini_window.y + self.mini_window.height - 500
                     dop_sprite = arcade.Sprite("FlyArrowsMehanic/ArrowAddEnd.png", scale=0.5)
                     dop_sprite.center_x = self.mini_window.x + self.mini_window.width // 5 * 2
-                    dop_sprite.center_y = self.mini_window.y + self.mini_window.height - 450 - (tarrow - 1) * self.cycle_time * self.speed
+                    dop_sprite.center_y = self.mini_window.y + self.mini_window.height - 500 - (tarrow - 1) * self.cycle_time * self.speed
                     self.all_arrow_sprites.append(dop_sprite)
                     for j in range(int((self.cycle_time * self.speed / 20) * (tarrow - 1))):
                         dop_sprite = arcade.Sprite("FlyArrowsMehanic/ArrowAdd.png", scale=0.5)
                         dop_sprite.center_x = self.mini_window.x + self.mini_window.width // 5 * 2
-                        dop_sprite.center_y = self.mini_window.y + self.mini_window.height - 450 - ((j + 1) * 20)
+                        dop_sprite.center_y = self.mini_window.y + self.mini_window.height - 500 - ((j + 1) * 20)
                         self.all_arrow_sprites.append(dop_sprite)
                 elif index == 2:
                     player_sprite.center_x = self.mini_window.x + self.mini_window.width // 5 * 3
-                    player_sprite.center_y = self.mini_window.y + self.mini_window.height - 450
+                    player_sprite.center_y = self.mini_window.y + self.mini_window.height - 500
                     dop_sprite = arcade.Sprite("FlyArrowsMehanic/ArrowAddEnd.png", scale=0.5)
                     dop_sprite.center_x = self.mini_window.x + self.mini_window.width // 5 * 3
-                    dop_sprite.center_y = self.mini_window.y + self.mini_window.height - 450 - (tarrow - 1) * self.cycle_time * self.speed
+                    dop_sprite.center_y = self.mini_window.y + self.mini_window.height - 500 - (tarrow - 1) * self.cycle_time * self.speed
                     self.all_arrow_sprites.append(dop_sprite)
                     for j in range(int((self.cycle_time * self.speed / 20) * (tarrow - 1))):
                         dop_sprite = arcade.Sprite("FlyArrowsMehanic/ArrowAdd.png", scale=0.5)
                         dop_sprite.center_x = self.mini_window.x + self.mini_window.width // 5 * 3
-                        dop_sprite.center_y = self.mini_window.y + self.mini_window.height - 450 - ((j + 1) * 20)
+                        dop_sprite.center_y = self.mini_window.y + self.mini_window.height - 500 - ((j + 1) * 20)
                         self.all_arrow_sprites.append(dop_sprite)
                 elif index == 3:
                     player_sprite.center_x = self.mini_window.x + self.mini_window.width // 5 * 4
-                    player_sprite.center_y = self.mini_window.y + self.mini_window.height - 450
+                    player_sprite.center_y = self.mini_window.y + self.mini_window.height - 500
                     dop_sprite = arcade.Sprite("FlyArrowsMehanic/ArrowAddEnd.png", scale=0.5)
                     dop_sprite.center_x = self.mini_window.x + self.mini_window.width // 5 * 4
-                    dop_sprite.center_y = self.mini_window.y + self.mini_window.height - 450 - (tarrow - 1) * self.cycle_time * self.speed
+                    dop_sprite.center_y = self.mini_window.y + self.mini_window.height - 500 - (tarrow - 1) * self.cycle_time * self.speed
                     self.all_arrow_sprites.append(dop_sprite)
                     for j in range(int((self.cycle_time * self.speed / 20) * (tarrow - 1))):
                         dop_sprite = arcade.Sprite("FlyArrowsMehanic/ArrowAdd.png", scale=0.5)
                         dop_sprite.center_x = self.mini_window.x + self.mini_window.width // 5 * 4
-                        dop_sprite.center_y = self.mini_window.y + self.mini_window.height - 450 - ((j + 1) * 20)
+                        dop_sprite.center_y = self.mini_window.y + self.mini_window.height - 500 - ((j + 1) * 20)
                         self.all_arrow_sprites.append(dop_sprite)
                 self.all_arrow_sprites.append(player_sprite)
                 del self.arrows[i]
@@ -300,7 +305,7 @@ class AttackView(arcade.View):
     def fly_arrows_vid(self, delta_time):
         for i, arrow in enumerate(self.all_arrow_sprites):
             arrow.center_y += self.speed * delta_time
-            if arrow.center_y > 800:
+            if arrow.center_y > self.mini_window.height + 100:
                 self.all_arrow_sprites.pop(i)
 
     # Функция для выхода из мини-боя
