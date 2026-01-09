@@ -11,6 +11,9 @@ class AttackView(arcade.View):
         self.main_scene_manager = main_scene_manager
         self.fight_box = main_scene_manager.fight_box
         self.mini_window = self.fight_box.mini_window
+
+        self.fight_box.health_bar_list.change_to_mini_game()
+
         arcade.set_background_color(arcade.color.BLACK)
         self.setup2()
 
@@ -76,12 +79,19 @@ class AttackView(arcade.View):
         self.clear()
         fb = self.fight_box
 
+        arcade.draw_lbwh_rectangle_outline(
+            self.mini_window.x,
+            self.mini_window.y,
+            self.mini_window.width,
+            self.mini_window.height,
+            arcade.color.WHITE,
+            5
+        )
+
         self.all_arrow_sprites.draw()
         self.all_sprites.draw()
 
-        fb.attack_health_bar.draw()
-        fb.defender_health_bar.draw()
-        fb.heal_health_bar.draw()
+        fb.health_bar_list.draw()
 
     def on_update(self, delta_time):
         """Этот метод отвечает за обновление логики игры (анимации, взаимодействия и т. д.)"""
