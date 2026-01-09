@@ -17,10 +17,10 @@ PANEL_MARGIN = 10
 ELEMENT_MARGIN = 3
 
 # Константы для окошка мини-игр
-MINI_WINDOW_WIDTH = 600
-MINI_WINDOW_HEIGHT = 400
+MINI_WINDOW_WIDTH = 700
+MINI_WINDOW_HEIGHT = 650
 MINI_WINDOW_CENTER_X = 500
-MINI_WINDOW_CENTER_Y = 500
+MINI_WINDOW_CENTER_Y = 420
 
 
 # Динамические объекты
@@ -28,6 +28,7 @@ MINI_WINDOW_CENTER_Y = 500
 
 # Функция для переключения на меню
 def menu_setup(scene_manager, *settings):
+    scene_manager.fight_box.health_bar_list.change_to_menu()
     scene_manager.window.show_view(scene_manager.fight_box.menu_view)
 
 
@@ -85,10 +86,7 @@ class MenuView(arcade.View):
         )
 
         fb.interface.draw()
-        fb.attack_health_bar.draw()
-        fb.defender_health_bar.draw()
-        fb.heal_health_bar.draw()
-
+        fb.health_bar_list.draw()
 
     def on_key_press(self, key, modifiers):
         if key == arcade.key.KEY_1:
@@ -176,6 +174,32 @@ class HealthBar:
             self.height,
             self.rest_health_color
         )
+
+
+class HealthBarList:
+    def __init__(self, fight_box):
+        self.fight_box = fight_box
+
+        self.is_mini_game = False
+
+        self.attack_health_bar = HealthBar(170, 200, self)
+        self.defender_health_bar = HealthBar(170 + 275, 200, self)
+        self.heal_health_bar = HealthBar(170 + 275 * 2, 200, self)
+        self.bar_lst = [self.attack_health_bar, self.defender_health_bar, self.heal_health_bar]
+
+    def draw(self):
+        for bar in self.bar_lst:
+            bar.draw()
+
+    def change_to_mini_game(self):
+        self.is_mini_game = True
+        for bar in self.bar_lst:
+            bar.center_y = 30
+
+    def change_to_menu(self):
+        self.is_mini_game = False
+        for bar in self.bar_lst:
+            bar.center_y = 200
 
 
 # Интерфейс, кнопки выбора действия, аура - отрисовка и механика
@@ -497,9 +521,13 @@ class Interface:
 # Реализация механики персонажей - здоровье, действие, предметы - только механика, отрисовка в Background
 class HeroMechanic:
     def __init__(self):
-        self.health = 100 # Здоровье
-        self.is_in_fight = False # Участвует ли в мини-бое в данный момент
+        self.health = 100 # Очки здоровья
         self.attributes = [] # Предметы в инвентаре
+
+
+class PlayerMechanic:
+    def __init__(self):
+        ...
 
 
 # Окно для мини-игры
@@ -507,10 +535,12 @@ class MiniWindow:
     def __init__(self):
         self.width = MINI_WINDOW_WIDTH
         self.height = MINI_WINDOW_HEIGHT
-        self.center_x = MINI_WINDOW_CENTER_Y
+        self.center_x = MINI_WINDOW_CENTER_X
         self.center_y = MINI_WINDOW_CENTER_Y
         self.x = self.center_x - self.width // 2
         self.y = self.center_y - self.height // 2
+
+
 
 # Главное для запуска битвы
 # <-------------------------------------------------------------------------------------------------------------------
@@ -529,9 +559,7 @@ class FightBox:
         self.center_y = self.window.center_y
 
         # Полоски здоровья у интерфейса
-        self.attack_health_bar = HealthBar(170, 200, self)
-        self.defender_health_bar = HealthBar(170 + 275, 200, self)
-        self.heal_health_bar = HealthBar(170 + 275 * 2, 200, self)
+        self.health_bar_list = HealthBarList(self)
 
         self.interface = Interface(self)
 
