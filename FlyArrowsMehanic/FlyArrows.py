@@ -91,6 +91,7 @@ class AttackView(arcade.View):
         self.all_arrow_sprites.draw()
         self.all_sprites.draw()
 
+        fb.background_for_mini_game.draw()
         fb.health_bar_list.draw()
 
     def on_update(self, delta_time):

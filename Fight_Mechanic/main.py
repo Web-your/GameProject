@@ -202,6 +202,39 @@ class HealthBarList:
             bar.center_y = 200
 
 
+class BackgroundForMiniGame:
+    def __init__(self, fight_box):
+        self.fight_box = fight_box
+        self.fon_color = arcade.color.BLACK
+
+    def draw(self):
+        window = self.fight_box.window
+        mini_window = self.fight_box.mini_window
+
+        # Левый
+        arcade.draw_lbwh_rectangle_filled(0,0, mini_window.x, window.height, self.fon_color)
+
+        # Правый
+        arcade.draw_lbwh_rectangle_filled(
+            mini_window.x + mini_window.width,
+            0,
+            window.width - mini_window.width - mini_window.x,
+            window.height,
+            self.fon_color
+        )
+
+        # Нижний
+        arcade.draw_lbwh_rectangle_filled(mini_window.x, 0, mini_window.width, mini_window.y, self.fon_color)
+
+        # Верхний
+        arcade.draw_lbwh_rectangle_filled(
+            mini_window.x,
+            mini_window.y + mini_window.height,
+            mini_window.width,
+            window.height - mini_window.height - mini_window.y,
+            self.fon_color)
+
+
 # Интерфейс, кнопки выбора действия, аура - отрисовка и механика
 class Interface:
     def __init__(self, fight_box):
@@ -557,6 +590,9 @@ class FightBox:
         self.height = self.window.height
         self.center_x = self.window.center_x
         self.center_y = self.window.center_y
+
+        # Фон для мини игр, чтобы ограничить область для мини-игры
+        self.background_for_mini_game = BackgroundForMiniGame(self)
 
         # Полоски здоровья у интерфейса
         self.health_bar_list = HealthBarList(self)
