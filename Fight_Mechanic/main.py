@@ -16,6 +16,11 @@ BUTTON_HEIGHT = 50
 PANEL_MARGIN = 10
 ELEMENT_MARGIN = 3
 
+# Константы для окошка мини-игр
+MINI_WINDOW_WIDTH = 600
+MINI_WINDOW_HEIGHT = 400
+MINI_WINDOW_CENTER_X = 500
+MINI_WINDOW_CENTER_Y = 500
 
 
 # Динамические объекты
@@ -70,6 +75,7 @@ class MenuView(arcade.View):
 
     def on_draw(self):
         self.clear()
+        fb = self.fight_box
         arcade.draw_text(
             self.text,
             self.center_x,
@@ -78,7 +84,11 @@ class MenuView(arcade.View):
             40,
         )
 
-        self.fight_box.interface.draw()
+        fb.interface.draw()
+        fb.attack_health_bar.draw()
+        fb.defender_health_bar.draw()
+        fb.heal_health_bar.draw()
+
 
     def on_key_press(self, key, modifiers):
         if key == arcade.key.KEY_1:
@@ -122,6 +132,50 @@ class Background:
     # Для отрисовки фоновых объектов
     def draw(self):
         ...
+
+
+# Полоска здоровья у героя
+class HealthBar:
+    def __init__(self, center_x, center_y, fight_box):
+        self.fight_box = fight_box
+
+        self.health_factor = 1 # Доля здоровья
+
+        self.width = 200
+        self.height = 10
+        self.center_x = center_x
+        self.center_y = center_y
+
+        self.curr_health_color = arcade.color.GREEN
+        self.rest_health_color = arcade.color.RED
+
+    def update(self, new_health_factor):
+        self.health_factor = new_health_factor
+
+    def draw(self):
+        bottom = self.center_y - self.height // 2
+
+        # Текущее здоровье (зелёный)
+        curr_health_width = self.width * self.health_factor
+        curr_health_left = self.center_x - self.width // 2
+        arcade.draw_lbwh_rectangle_filled(
+            curr_health_left,
+            bottom,
+            curr_health_width,
+            self.height,
+            self.curr_health_color
+        )
+
+        # Остаток здоровья до максимума (красный)
+        rest_health_width = self.width - curr_health_width
+        rest_health_left = curr_health_left + curr_health_width
+        arcade.draw_lbwh_rectangle_filled(
+            rest_health_left,
+            bottom,
+            rest_health_width,
+            self.height,
+            self.rest_health_color
+        )
 
 
 # Интерфейс, кнопки выбора действия, аура - отрисовка и механика
@@ -448,6 +502,15 @@ class HeroMechanic:
         self.attributes = [] # Предметы в инвентаре
 
 
+# Окно для мини-игры
+class MiniWindow:
+    def __init__(self):
+        self.width = MINI_WINDOW_WIDTH
+        self.height = MINI_WINDOW_HEIGHT
+        self.center_x = MINI_WINDOW_CENTER_Y
+        self.center_y = MINI_WINDOW_CENTER_Y
+        self.x = self.center_x - self.width // 2
+        self.y = self.center_y - self.height // 2
 
 # Главное для запуска битвы
 # <-------------------------------------------------------------------------------------------------------------------
@@ -457,12 +520,18 @@ class FightBox:
     def __init__(self, main_scene_manager):
         self.main_scene_manager = main_scene_manager # Ссылка на предыдущий менеджер сцен
         self.window = main_scene_manager.window # Ссылка на окно
+        self.mini_window = MiniWindow() # Окно для мини-игры
 
         # Параметры окна
         self.width = self.window.width
         self.height = self.window.height
         self.center_x = self.window.center_x
         self.center_y = self.window.center_y
+
+        # Полоски здоровья у интерфейса
+        self.attack_health_bar = HealthBar(170, 200, self)
+        self.defender_health_bar = HealthBar(170 + 275, 200, self)
+        self.heal_health_bar = HealthBar(170 + 275 * 2, 200, self)
 
         self.interface = Interface(self)
 
