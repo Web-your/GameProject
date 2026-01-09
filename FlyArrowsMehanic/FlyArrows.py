@@ -11,7 +11,7 @@ class AttackView(arcade.View):
         self.main_scene_manager = main_scene_manager
         self.fight_box = main_scene_manager.fight_box
         self.mini_window = fight_box.mini_window
-
+        self.mini_window = self.fight_box.mini_window
         arcade.set_background_color(arcade.color.BLACK)
         self.setup2()
 
@@ -75,9 +75,15 @@ class AttackView(arcade.View):
     def on_draw(self):
         """Этот метод отвечает за отрисовку содержимого окна"""
         self.clear()
+        fb = self.fight_box
+
         self.all_arrow_sprites.draw()
         self.all_sprites.draw()
         self.batch.draw()
+
+        fb.attack_health_bar.draw()
+        fb.defender_health_bar.draw()
+        fb.heal_health_bar.draw()
 
     def on_update(self, delta_time):
         """Этот метод отвечает за обновление логики игры (анимации, взаимодействия и т. д.)"""
