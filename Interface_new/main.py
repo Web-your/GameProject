@@ -1,16 +1,16 @@
-""" Name: Максим | Date: 10.01.2026 | WhatYouDo: Загрузил обновлённый интерфейс """
+""" Name: Максим | Date: 11.01.2026 | WhatYouDo: Исправил баги """
 from PIL import Image
 import arcade
 import io
 
 SCREEN_WIDTH = 960
-SCREEN_HEIGHT = 600
+SCREEN_HEIGHT = 400
 MAIN_PANEL_WIDTH = 960
-MAIN_PANEL_HEIGHT = 200
+MAIN_PANEL_HEIGHT = 140
 BUTTON_WIDTH = 50
 BUTTON_HEIGHT = 50
 PANEL_MARGIN = 10
-ELEMENT_MARGIN = 3
+ELEMENT_MARGIN = 10
 
 STATE_NORMAL = "normal"
 STATE_SELECTION = "selection"
@@ -224,7 +224,7 @@ class InterfaceView(arcade.View):
         for i in range(3):
             zone_x = (self.main_panel_x - self.main_panel_width / 2 + PANEL_MARGIN +
                       zone_width // 2 + i * (zone_width + PANEL_MARGIN) + 20 * i + 40)
-            zone_y = self.main_panel_y + 50
+            zone_y = self.main_panel_y + 60
 
             zone_sprite = self.create_zone_sprite(zone_x, zone_y, zone_width, zone_height, i)
             self.zones_list.append(zone_sprite)
@@ -296,14 +296,14 @@ class InterfaceView(arcade.View):
             item_prefix = "Предмет"
 
         selection_height = 120
-        selection_y = 80
+        selection_y = 70
 
         self.selection_zone = {
             'x': SCREEN_WIDTH // 2,
             'y': selection_y,
             'width': SCREEN_WIDTH - 40,
             'height': selection_height,
-            'color': arcade.color.DARK_GRAY,
+            'color': arcade.color.BLACK,
             'title': title
         }
 
@@ -313,17 +313,25 @@ class InterfaceView(arcade.View):
         item_width = 70
         item_height = 30
         items_per_column = 3
-        column_count = 3
 
-        column_spacing = 85
+        if selection_type in ['actionIcon_1', 'actionIcon_2', 'actionIcon_3']:
+            column_count = 2
+            column_spacing = 140
+        else:
+            column_count = 3
+            column_spacing = 85
 
         for col in range(column_count):
-            column_x = 50 + col * column_spacing
+            column_x = 60 + col * column_spacing
             column_items = []
 
             for row in range(items_per_column):
-                item_y = selection_y + 30 - row * (item_height + 10)
-                item_num = col * 3 + row + 1
+                item_y = selection_y + 40 - row * (item_height + 10)
+
+                if selection_type in ['actionIcon_1', 'actionIcon_2', 'actionIcon_3'] and col == 1:
+                    item_num = row + 1
+                else:
+                    item_num = col * 3 + row + 1
 
                 item = {
                     'x': column_x,
@@ -333,19 +341,15 @@ class InterfaceView(arcade.View):
                     'text': f"{item_prefix} {item_num}",
                     'column': col,
                     'row': row,
-                    'selected': False
+                    'selected': False,
+                    'item_num': item_num
                 }
                 column_items.append(item)
                 self.selection_items.append(item)
 
             self.selection_columns.append(column_items)
 
-        if column_count >= 3:
-            self.divider_x = 50 + 1 * column_spacing + column_spacing / 2 + 5
-            self.divider_visible = True
-        else:
-            self.divider_x = None
-            self.divider_visible = False
+        self.divider_visible = False
 
         self.update_selection_indicator()
 
@@ -388,6 +392,7 @@ class InterfaceView(arcade.View):
 
         current_col = self.selected_column
         current_row = self.selected_item_index
+        column_count = len(self.selection_columns)
 
         if direction == 'up':
             new_row = (current_row - 1) % 3
@@ -396,10 +401,10 @@ class InterfaceView(arcade.View):
             new_row = (current_row + 1) % 3
             self.selected_item_index = new_row
         elif direction == 'left':
-            new_col = (current_col - 1) % 3
+            new_col = (current_col - 1) % column_count
             self.selected_column = new_col
         elif direction == 'right':
-            new_col = (current_col + 1) % 3
+            new_col = (current_col + 1) % column_count
             self.selected_column = new_col
 
         selected_item = self.selection_columns[self.selected_column][self.selected_item_index]
@@ -456,6 +461,9 @@ class InterfaceView(arcade.View):
         if self.active_zone_index not in self.selected_zones:
             self.selected_zones.append(self.active_zone_index)
             self.selected_zones.sort()
+
+        if self.ui_state == STATE_SELECTION:
+            self.reset_selection()
 
         if len(self.selected_zones) == 3:
             print("Все зоны выбраны! Переход в режим ожидания...")
@@ -560,15 +568,6 @@ class InterfaceView(arcade.View):
             bold=True
         )
 
-        if self.divider_x and self.divider_visible:
-            divider_top = self.selection_zone['y'] + 45
-            divider_bottom = self.selection_zone['y'] - 45
-
-            arcade.draw_line(
-                self.divider_x, divider_top,
-                self.divider_x, divider_bottom,
-                arcade.color.GRAY, 3
-            )
 
         for item in self.selection_items:
             item_rect = arcade.LRBT(
@@ -689,30 +688,6 @@ class InterfaceView(arcade.View):
 
         self.buttons_list.draw()
 
-        for button in self.buttons_list:
-            has_texture = button.normal_texture is not None
-
-            if not has_texture:
-                if button.button_index == 0:
-                    text = "Кнопка 1"
-                elif button.button_index == 1:
-                    text = "Кнопка 2"
-                elif button.button_index == 2:
-                    text = "Кнопка 3"
-                else:
-                    text = f"Кнопка {button.button_index + 1}"
-
-                arcade.draw_text(
-                    text,
-                    button.center_x,
-                    button.center_y,
-                    arcade.color.WHITE,
-                    9,
-                    anchor_x="center",
-                    anchor_y="center",
-                    bold=True
-                )
-
         if self.ui_state == STATE_SELECTION:
             self.draw_selection_zone()
 
@@ -790,10 +765,7 @@ class InterfaceView(arcade.View):
                             return
 
     def on_key_press(self, key, modifiers):
-        if key == arcade.key.ESCAPE:
-            arcade.close_window()
-
-        elif key == arcade.key.M:
+        if key == arcade.key.M:
             self.add_aura()
 
         elif key == arcade.key.R:
