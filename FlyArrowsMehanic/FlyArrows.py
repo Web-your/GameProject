@@ -10,9 +10,9 @@ class AttackView(arcade.View):
         super().__init__()
         self.main_scene_manager = main_scene_manager
         self.fight_box = main_scene_manager.fight_box
-        self.mini_window = self.fight_box.mini_window
 
-        self.fight_box.health_bar_list.change_to_mini_game()
+        self.mg_box = self.fight_box.mg_box
+        self.mini_window = self.mg_box.mini_window
 
         arcade.set_background_color(arcade.color.BLACK)
         self.setup2()
@@ -87,20 +87,10 @@ class AttackView(arcade.View):
                                           arcade.color.BLACK)
         self.all_sprites.draw()
 
-        arcade.draw_lbwh_rectangle_outline(
-            self.mini_window.x,
-            self.mini_window.y,
-            self.mini_window.width,
-            self.mini_window.height,
-            arcade.color.WHITE,
-            5
-        )
-
         self.all_arrow_sprites.draw()
         self.all_sprites.draw()
 
-        fb.background_for_mini_game.draw()
-        fb.health_bar_list.draw()
+        self.mg_box.draw()
 
     def on_update(self, delta_time):
         """Этот метод отвечает за обновление логики игры (анимации, взаимодействия и т. д.)"""
@@ -238,6 +228,7 @@ class AttackView(arcade.View):
         for i, item in enumerate(self.arrows):
             index, tcycle, tarrow = item
             if self.total_time - 2 >= tcycle * self.cycle_time - (400/self.speed) and tarrow <= 1:
+
                 player_sprite = arcade.Sprite(dct_index[index], scale=0.5)
                 if index == 0:
                     player_sprite.center_x = self.mini_window.x + self.mini_window.width // 5
@@ -254,6 +245,7 @@ class AttackView(arcade.View):
                 self.all_arrow_sprites.append(player_sprite)
                 del self.arrows[i]
             elif self.total_time - 2 >= tcycle * self.cycle_time - (400/self.speed) and tarrow > 1:
+
                 player_sprite = arcade.Sprite(dct_index[index], scale=0.5)
                 if index == 0:
                     player_sprite.center_x = self.mini_window.x + self.mini_window.width // 5

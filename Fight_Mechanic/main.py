@@ -8,6 +8,11 @@ from Defender_Battle.main import setup_defender
 from healFlySticksMechanic.healAct import setup_heal
 from FlyArrowsMehanic.FlyArrows import setup_attack
 
+# Импортируем интерфейс для мини-боя
+from Fight_Mechanic.MiniGameDopObjects import MiniGameDopBox
+
+
+
 # Константы для интерфейса
 MAIN_PANEL_WIDTH = 960
 MAIN_PANEL_HEIGHT = 200
@@ -23,13 +28,14 @@ MINI_WINDOW_CENTER_X = 500
 MINI_WINDOW_CENTER_Y = 420
 
 
+
 # Динамические объекты
 # <-------------------------------------------------------------------------------------------------------------------
 
 # Функция для переключения на меню
 def menu_setup(scene_manager, *settings):
-    scene_manager.fight_box.health_bar_list.change_to_menu()
-    scene_manager.window.show_view(scene_manager.fight_box.menu_view)
+    fight_box = scene_manager.fight_box
+    fight_box.window.show_view(fight_box.menu_view)
 
 
 # Переключается меду сценами, окнами и мини-играми
@@ -49,13 +55,18 @@ class SceneManager:
     # Запускаем следующую сцену
     def next_scene(self, *args):
         func = self.scenes[self.curr_scene_index]
-        if self.curr_scene_index != 0:
-            self.curr_scene_index = 0  # Возвращаемся на меню после мини-боя
+        self.change_curr_scene_index()
         func(self)  # Передаём себя, чтобы вернуться и запустить следующую сцену
+
+    # Меняем индекс текущей сцены
+    def change_curr_scene_index(self):
+        # Возвращаемся на меню после мини-боя
+        if self.curr_scene_index != 0:
+            self.curr_scene_index = 0
 
     # Выходим из боёвки
     def back(self):
-        ...
+        stop_fight(self.fight_box)
 
 
 # Окно отрисовки меню
@@ -77,6 +88,7 @@ class MenuView(arcade.View):
     def on_draw(self):
         self.clear()
         fb = self.fight_box
+
         arcade.draw_text(
             self.text,
             self.center_x,
@@ -86,7 +98,6 @@ class MenuView(arcade.View):
         )
 
         fb.interface.draw()
-        fb.health_bar_list.draw()
 
     def on_key_press(self, key, modifiers):
         if key == arcade.key.KEY_1:
@@ -130,109 +141,6 @@ class Background:
     # Для отрисовки фоновых объектов
     def draw(self):
         ...
-
-
-# Полоска здоровья у героя
-class HealthBar:
-    def __init__(self, center_x, center_y, fight_box):
-        self.fight_box = fight_box
-
-        self.health_factor = 1 # Доля здоровья
-
-        self.width = 200
-        self.height = 10
-        self.center_x = center_x
-        self.center_y = center_y
-
-        self.curr_health_color = arcade.color.GREEN
-        self.rest_health_color = arcade.color.RED
-
-    def update(self, new_health_factor):
-        self.health_factor = new_health_factor
-
-    def draw(self):
-        bottom = self.center_y - self.height // 2
-
-        # Текущее здоровье (зелёный)
-        curr_health_width = self.width * self.health_factor
-        curr_health_left = self.center_x - self.width // 2
-        arcade.draw_lbwh_rectangle_filled(
-            curr_health_left,
-            bottom,
-            curr_health_width,
-            self.height,
-            self.curr_health_color
-        )
-
-        # Остаток здоровья до максимума (красный)
-        rest_health_width = self.width - curr_health_width
-        rest_health_left = curr_health_left + curr_health_width
-        arcade.draw_lbwh_rectangle_filled(
-            rest_health_left,
-            bottom,
-            rest_health_width,
-            self.height,
-            self.rest_health_color
-        )
-
-
-class HealthBarList:
-    def __init__(self, fight_box):
-        self.fight_box = fight_box
-
-        self.is_mini_game = False
-
-        self.attack_health_bar = HealthBar(170, 200, self)
-        self.defender_health_bar = HealthBar(170 + 275, 200, self)
-        self.heal_health_bar = HealthBar(170 + 275 * 2, 200, self)
-        self.bar_lst = [self.attack_health_bar, self.defender_health_bar, self.heal_health_bar]
-
-    def draw(self):
-        for bar in self.bar_lst:
-            bar.draw()
-
-    def change_to_mini_game(self):
-        self.is_mini_game = True
-        for bar in self.bar_lst:
-            bar.center_y = 30
-
-    def change_to_menu(self):
-        self.is_mini_game = False
-        for bar in self.bar_lst:
-            bar.center_y = 200
-
-
-class BackgroundForMiniGame:
-    def __init__(self, fight_box):
-        self.fight_box = fight_box
-        self.fon_color = arcade.color.BLACK
-
-    def draw(self):
-        window = self.fight_box.window
-        mini_window = self.fight_box.mini_window
-
-        # Левый
-        arcade.draw_lbwh_rectangle_filled(0,0, mini_window.x, window.height, self.fon_color)
-
-        # Правый
-        arcade.draw_lbwh_rectangle_filled(
-            mini_window.x + mini_window.width,
-            0,
-            window.width - mini_window.width - mini_window.x,
-            window.height,
-            self.fon_color
-        )
-
-        # Нижний
-        arcade.draw_lbwh_rectangle_filled(mini_window.x, 0, mini_window.width, mini_window.y, self.fon_color)
-
-        # Верхний
-        arcade.draw_lbwh_rectangle_filled(
-            mini_window.x,
-            mini_window.y + mini_window.height,
-            mini_window.width,
-            window.height - mini_window.height - mini_window.y,
-            self.fon_color)
 
 
 # Интерфейс, кнопки выбора действия, аура - отрисовка и механика
@@ -551,39 +459,17 @@ class Interface:
                     return
 
 
-# Реализация механики персонажей - здоровье, действие, предметы - только механика, отрисовка в Background
-class HeroMechanic:
-    def __init__(self):
-        self.health = 100 # Очки здоровья
-        self.attributes = [] # Предметы в инвентаре
-
-
-class PlayerMechanic:
-    def __init__(self):
-        ...
-
-
-# Окно для мини-игры
-class MiniWindow:
-    def __init__(self):
-        self.width = MINI_WINDOW_WIDTH
-        self.height = MINI_WINDOW_HEIGHT
-        self.center_x = MINI_WINDOW_CENTER_X
-        self.center_y = MINI_WINDOW_CENTER_Y
-        self.x = self.center_x - self.width // 2
-        self.y = self.center_y - self.height // 2
-
-
 
 # Главное для запуска битвы
 # <-------------------------------------------------------------------------------------------------------------------
 
 # Содержит все объекты
 class FightBox:
-    def __init__(self, main_scene_manager):
+    def __init__(self, main_scene_manager, *settings):
         self.main_scene_manager = main_scene_manager # Ссылка на предыдущий менеджер сцен
         self.window = main_scene_manager.window # Ссылка на окно
-        self.mini_window = MiniWindow() # Окно для мини-игры
+
+        self.mg_box = MiniGameDopBox(self) # Доп объекты для мини-игры
 
         # Параметры окна
         self.width = self.window.width
@@ -591,13 +477,7 @@ class FightBox:
         self.center_x = self.window.center_x
         self.center_y = self.window.center_y
 
-        # Фон для мини игр, чтобы ограничить область для мини-игры
-        self.background_for_mini_game = BackgroundForMiniGame(self)
-
-        # Полоски здоровья у интерфейса
-        self.health_bar_list = HealthBarList(self)
-
-        self.interface = Interface(self)
+        self.interface = Interface(self) # Интерфейс
 
         self.scene_manager = SceneManager(self)  # Собственный менеджер сцен
         self.menu_view = MenuView(self)  # Окно отрисовки меню
@@ -606,8 +486,16 @@ class FightBox:
 
 
 # Функция для запуска общей битвы
-def setup_fight(main_scene_manager):
-    FightBox(main_scene_manager)
+def setup_fight(main_scene_manager, *settings):
+    FightBox(main_scene_manager, *settings)
+
+
+# Функция для остановки общей битвы
+def stop_fight(fight_box):
+    main_scene_manager = fight_box.main_scene_manager
+    # Вносим изменения в main_scene_manager ...
+    del fight_box
+    main_scene_manager.next_scene()
 
 
 

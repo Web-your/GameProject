@@ -84,7 +84,7 @@ class WaveScene:
         self.bullet_mech = BulletMechanic(self.df)
         self.cristal_mech = CristalMechanic(self.df)
 
-        self.wave_time = 20 # Время волны
+        self.wave_time = 10 # Время волны
         self.pause1_time = 1.5 # Время после последнего воспламенения, когда активны спрайты
         self.pause2_time = 1.5 # Время до финиша, когда спрайты не активны
 
@@ -95,7 +95,7 @@ class WaveScene:
         self.fire_board_mech.setup()
         self.bullet_mech.setup()
         self.cristal_mech.setup()
-        self.player_music = arcade.play_sound(self.main_music, volume=0.25)
+        self.player_music = arcade.play_sound(self.main_music, volume=0.5)
         arcade.schedule(self.stop, self.wave_time)
 
     # Останавливаем механики
@@ -343,6 +343,8 @@ class WaveView(arcade.View):
 
         self.df.interface_camera.use()
         self.df.batch.draw()
+
+        df.main_scene_manager.fight_box.mini_window.draw()
 
     def on_key_press(self, key, modifiers):
         self.keys_pressed.add(key)
