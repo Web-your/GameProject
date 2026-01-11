@@ -1,4 +1,4 @@
-""" Name: Максим | Date: 11.01.2026 | WhatYouDo: Исправил баги """
+""" Name: Максим | Date: 11.01.2026 | WhatYouDo: Обновил интерфейс """
 from PIL import Image
 import arcade
 import io
@@ -81,6 +81,11 @@ class InterfaceView(arcade.View):
 
         self.confirmed_selections = {}
         self.selected_zones = []
+        self.selected_buttons = {}
+
+        self.selected_button_zone = 0
+        self.selected_button_index = 0
+        self.button_indicator = None
 
         self.textures = {}
         self.button_sprites = {}
@@ -88,6 +93,7 @@ class InterfaceView(arcade.View):
         self.load_textures()
 
         self.create_interface()
+        self.update_button_indicator()
 
     def load_textures(self):
         try:
@@ -272,8 +278,87 @@ class InterfaceView(arcade.View):
                 button_sprite.zone_index = i
                 button_sprite.button_index = j
                 button_sprite.is_main_button = (j == 0)
+                button_sprite.is_confirmed = False
 
                 self.buttons_list.append(button_sprite)
+
+    def update_button_indicator(self):
+        for button in self.buttons_list:
+            if (button.zone_index == self.selected_button_zone and
+                    button.button_index == self.selected_button_index):
+                self.button_indicator = {
+                    'x': button.center_x,
+                    'y': button.center_y,
+                    'width': button.width,
+                    'height': button.height,
+                    'zone_index': button.zone_index
+                }
+                break
+
+    def move_button_selection(self, direction):
+        if self.ui_state != STATE_NORMAL:
+            return
+
+        total_buttons = 9
+        current_flat_index = self.selected_button_zone * 3 + self.selected_button_index
+
+        if direction == 'left':
+            if self.selected_button_index > 0:
+                self.selected_button_index -= 1
+            elif self.selected_button_zone > 0:
+                self.selected_button_zone -= 1
+                self.selected_button_index = 2
+
+        elif direction == 'right':
+            if self.selected_button_index < 2:
+                self.selected_button_index += 1
+            elif self.selected_button_zone < 2:
+                self.selected_button_zone += 1
+                self.selected_button_index = 0
+
+        elif direction == 'up':
+            new_flat_index = (current_flat_index - 3) % total_buttons
+            self.selected_button_zone = new_flat_index // 3
+            self.selected_button_index = new_flat_index % 3
+
+        elif direction == 'down':
+            new_flat_index = (current_flat_index + 3) % total_buttons
+            self.selected_button_zone = new_flat_index // 3
+            self.selected_button_index = new_flat_index % 3
+
+        self.update_button_indicator()
+
+    def confirm_button_selection(self):
+        if self.ui_state != STATE_NORMAL:
+            return
+
+        selected_button = None
+        for button in self.buttons_list:
+            if (button.zone_index == self.selected_button_zone and
+                    button.button_index == self.selected_button_index):
+                selected_button = button
+                break
+
+        if not selected_button:
+            return
+
+        print(
+            f"Выбрана кнопка: Зона {selected_button.zone_index + 1}, Кнопка {selected_button.button_index + 1} ({selected_button.button_type})")
+
+        if selected_button.button_type == 'auroDopIcon':
+            self.immediate_auro_dop_selection(selected_button.zone_index)
+            self.move_to_next_zone()
+        else:
+            self.start_selection_mode(selected_button.button_type, selected_button.zone_index)
+
+    def move_to_next_zone(self):
+        for zone_idx in range(3):
+            next_zone = (self.selected_button_zone + zone_idx + 1) % 3
+            if next_zone not in self.selected_zones:
+                self.selected_button_zone = next_zone
+                self.selected_button_index = 0
+                self.update_button_indicator()
+                return
 
     def create_selection_zone(self, selection_type, zone_index):
         if self.ui_state == STATE_ALL_SELECTED:
@@ -349,7 +434,12 @@ class InterfaceView(arcade.View):
 
             self.selection_columns.append(column_items)
 
-        self.divider_visible = False
+        if selection_type in ['actionIcon_1', 'actionIcon_2', 'actionIcon_3']:
+            self.divider_x = 60 + 0.7 * column_spacing
+            self.divider_visible = True
+        else:
+            self.divider_x = None
+            self.divider_visible = False
 
         self.update_selection_indicator()
 
@@ -435,14 +525,29 @@ class InterfaceView(arcade.View):
             self.selected_zones.append(self.active_zone_index)
             self.selected_zones.sort()
 
+        for button in self.buttons_list:
+            if (button.zone_index == self.active_zone_index and
+                    button.button_type == self.current_selection_type):
+                button.is_confirmed = True
+                self.selected_buttons[self.active_zone_index] = {
+                    'zone_index': self.active_zone_index,
+                    'button_index': button.button_index,
+                    'button_type': button.button_type
+                }
+                break
+
         print(
             f"Выбрано для зоны {self.active_zone_index + 1}: {selected_item['text']} (тип: {self.current_selection_type})")
 
         if len(self.selected_zones) == 3:
             print("Все зоны выбраны! Переход в режим ожидания...")
             self.ui_state = STATE_ALL_SELECTED
+            self.selected_button_zone = 0
+            self.selected_button_index = 0
+            self.update_button_indicator()
         else:
             self.reset_selection()
+            self.move_to_next_zone()
 
     def immediate_auro_dop_selection(self, zone_index):
         if self.ui_state == STATE_ALL_SELECTED:
@@ -462,12 +567,26 @@ class InterfaceView(arcade.View):
             self.selected_zones.append(self.active_zone_index)
             self.selected_zones.sort()
 
+        for button in self.buttons_list:
+            if (button.zone_index == self.active_zone_index and
+                    button.button_type == 'auroDopIcon'):
+                button.is_confirmed = True
+                self.selected_buttons[self.active_zone_index] = {
+                    'zone_index': self.active_zone_index,
+                    'button_index': button.button_index,
+                    'button_type': button.button_type
+                }
+                break
+
         if self.ui_state == STATE_SELECTION:
             self.reset_selection()
 
         if len(self.selected_zones) == 3:
             print("Все зоны выбраны! Переход в режим ожидания...")
             self.ui_state = STATE_ALL_SELECTED
+            self.selected_button_zone = 0
+            self.selected_button_index = 0
+            self.update_button_indicator()
 
     def update_button_texture(self, button, is_hovered):
         if is_hovered != button.is_hovered:
@@ -568,6 +687,16 @@ class InterfaceView(arcade.View):
             bold=True
         )
 
+        if self.divider_visible and self.divider_x and self.current_selection_type in ['actionIcon_1', 'actionIcon_2',
+                                                                                       'actionIcon_3']:
+            divider_top = self.selection_zone['y'] + 45
+            divider_bottom = self.selection_zone['y'] - 45
+
+            arcade.draw_line(
+                self.divider_x, divider_top,
+                self.divider_x, divider_bottom,
+                arcade.color.GRAY, 2
+            )
 
         for item in self.selection_items:
             item_rect = arcade.LRBT(
@@ -669,6 +798,8 @@ class InterfaceView(arcade.View):
 
             if zone.zone_index in self.selected_zones:
                 arcade.draw_rect_outline(zone_rect, arcade.color.RED, 3)
+            elif self.button_indicator and zone.zone_index == self.button_indicator['zone_index']:
+                arcade.draw_rect_outline(zone_rect, arcade.color.YELLOW, 3)
             else:
                 arcade.draw_rect_outline(zone_rect, arcade.color.LIGHT_GRAY, 1)
 
@@ -687,6 +818,26 @@ class InterfaceView(arcade.View):
             )
 
         self.buttons_list.draw()
+
+        for button in self.buttons_list:
+            button_rect = arcade.LRBT(
+                left=button.center_x - button.width / 2,
+                right=button.center_x + button.width / 2,
+                bottom=button.center_y - button.height / 2,
+                top=button.center_y + button.height / 2
+            )
+
+            if button.is_confirmed:
+                arcade.draw_rect_outline(button_rect, arcade.color.RED, 3)
+
+        if self.button_indicator and self.ui_state == STATE_NORMAL:
+            indicator_rect = arcade.LRBT(
+                left=self.button_indicator['x'] - self.button_indicator['width'] / 2 - 2,
+                right=self.button_indicator['x'] + self.button_indicator['width'] / 2 + 2,
+                bottom=self.button_indicator['y'] - self.button_indicator['height'] / 2 - 2,
+                top=self.button_indicator['y'] + self.button_indicator['height'] / 2 + 2
+            )
+            arcade.draw_rect_outline(indicator_rect, arcade.color.YELLOW, 3)
 
         if self.ui_state == STATE_SELECTION:
             self.draw_selection_zone()
@@ -719,50 +870,10 @@ class InterfaceView(arcade.View):
                 )
 
     def on_mouse_motion(self, x, y, dx, dy):
-        if self.ui_state == STATE_NORMAL:
-            for button in self.buttons_list:
-                left = button.center_x - button.width / 2
-                right = button.center_x + button.width / 2
-                bottom = button.center_y - button.height / 2
-                top = button.center_y + button.height / 2
-
-                is_hovered = (left <= x <= right and bottom <= y <= top)
-                if is_hovered != button.is_hovered:
-                    button.is_hovered = is_hovered
+        pass
 
     def on_mouse_press(self, x, y, button, modifiers):
-        if button == arcade.MOUSE_BUTTON_LEFT:
-            if self.ui_state == STATE_NORMAL:
-                for btn in self.buttons_list:
-                    left = btn.center_x - btn.width / 2
-                    right = btn.center_x + btn.width / 2
-                    bottom = btn.center_y - btn.height / 2
-                    top = btn.center_y + btn.height / 2
-
-                    if left <= x <= right and bottom <= y <= top:
-                        print(
-                            f"Нажата кнопка: Зона {btn.zone_index + 1}, Кнопка {btn.button_index + 1})")
-
-                        if btn.button_type == 'auroDopIcon':
-                            self.immediate_auro_dop_selection(btn.zone_index)
-                        else:
-                            self.start_selection_mode(btn.button_type, btn.zone_index)
-                        return
-            elif self.ui_state == STATE_SELECTION:
-                for btn in self.buttons_list:
-                    left = btn.center_x - btn.width / 2
-                    right = btn.center_x + btn.width / 2
-                    bottom = btn.center_y - btn.height / 2
-                    top = btn.center_y + btn.height / 2
-
-                    if left <= x <= right and bottom <= y <= top:
-                        if btn.zone_index == self.active_zone_index:
-                            print(f"Переключение на кнопку: Зона {btn.zone_index + 1}, Кнопка {btn.button_index + 1}")
-                            if btn.button_type == 'auroDopIcon':
-                                self.immediate_auro_dop_selection(btn.zone_index)
-                            else:
-                                self.start_selection_mode(btn.button_type, btn.zone_index)
-                            return
+        pass
 
     def on_key_press(self, key, modifiers):
         if key == arcade.key.M:
@@ -773,7 +884,36 @@ class InterfaceView(arcade.View):
                 self.ui_state = STATE_NORMAL
                 self.confirmed_selections = {}
                 self.selected_zones = []
+                self.selected_buttons = {}
+                for button in self.buttons_list:
+                    button.is_confirmed = False
+                self.selected_button_zone = 0
+                self.selected_button_index = 0
+                self.update_button_indicator()
                 print("Все выборы сброшены. Возврат в нормальный режим.")
+
+        elif self.ui_state == STATE_NORMAL:
+            if key == arcade.key.LEFT:
+                self.move_button_selection('left')
+            elif key == arcade.key.RIGHT:
+                self.move_button_selection('right')
+            elif key == arcade.key.UP:
+                self.move_button_selection('up')
+            elif key == arcade.key.DOWN:
+                self.move_button_selection('down')
+            elif key == arcade.key.ENTER or key == arcade.key.RETURN:
+                self.confirm_button_selection()
+            elif key == arcade.key.C:
+                if self.selected_zones:
+                    self.confirmed_selections = {}
+                    self.selected_zones = []
+                    self.selected_buttons = {}
+                    for button in self.buttons_list:
+                        button.is_confirmed = False
+                    self.selected_button_zone = 0
+                    self.selected_button_index = 0
+                    self.update_button_indicator()
+                    print("Все выборы зон сброшены")
 
         elif self.ui_state == STATE_SELECTION:
             if key == arcade.key.LEFT:
@@ -788,12 +928,6 @@ class InterfaceView(arcade.View):
                 self.confirm_selection()
             elif key == arcade.key.BACKSPACE:
                 self.reset_selection()
-
-        elif self.ui_state == STATE_NORMAL and key == arcade.key.C:
-            if self.selected_zones:
-                self.confirmed_selections = {}
-                self.selected_zones = []
-                print("Все выборы зон сброшены")
 
 
 def main():
