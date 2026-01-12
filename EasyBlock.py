@@ -1,5 +1,5 @@
 import arcade
-from  PIL import Image
+from  PIL import Image, ImageFile
 from EazySprite import EasySprite
 
 
@@ -131,19 +131,14 @@ class TextureBlock:
             self,
             var1: int,
             var2: int,
-            orig_image,
+            image,
             scale: float = 1,
             creation_type: str = "LB"
     ):
-        if isinstance(orig_image, str):
-            orig_image = Image.open(orig_image)
-
-        self.image = EasySprite.resize_image(orig_image, scale)
-        self.texture = arcade.Texture(self.image)
-
-        self.width = self.image.width
-        self.height = self.image.height
-        self.size = [self.width, self.height]
+        self.texture = EasySprite.load_texture(image, scale)
+        self.image = self.texture.image
+        self.width = self.texture.width
+        self.height = self.texture.height
 
         creation_type = creation_type.upper()
         if creation_type == "LB":
