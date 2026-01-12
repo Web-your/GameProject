@@ -1,6 +1,6 @@
 import arcade
-from  PIL import Image, ImageFile
-from EazySprite import EasySprite
+import EasySprite
+from PIL import Image
 
 
 class VisualBlock:
@@ -10,8 +10,8 @@ class VisualBlock:
             var2: int,
             var3: int,
             var4: int,
-            base_fon_color: tuple | arcade.color.Color = arcade.color.BLACK,
-            base_frame_color: tuple | arcade.color.Color = arcade.color.WHITE,
+            base_fon_color: arcade.color.Color = arcade.color.BLACK,
+            base_frame_color: arcade.color.Color = arcade.color.WHITE,
             base_frame_width: int = 2,
             show_fon: bool = True,
             show_frame: bool = True,
@@ -131,11 +131,11 @@ class TextureBlock:
             self,
             var1: int,
             var2: int,
-            image,
+            obj: str | Image.Image,
             scale: float = 1,
             creation_type: str = "LB"
     ):
-        self.texture = EasySprite.load_texture(image, scale)
+        self.texture = EasySprite.load_texture(obj, scale)
         self.image = self.texture.image
         self.width = self.texture.width
         self.height = self.texture.height
@@ -171,17 +171,3 @@ class TextureBlock:
 
     def draw(self):
         arcade.draw_texture_rect(self.texture, self.rect)
-
-    def resize(self, scale):
-        self.image = EasySprite.resize_image(self.image, scale)
-        self.texture = arcade.Texture(self.image)
-
-        self.width = self.image.width
-        self.height = self.image.height
-
-        self.rect = arcade.XYWH(
-            self.center_x,
-            self.center_y,
-            self.width,
-            self.height
-        )

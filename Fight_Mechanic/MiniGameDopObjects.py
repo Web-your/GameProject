@@ -1,13 +1,13 @@
 import arcade
-
+import EasySprite
 from EasyBlock import VisualBlock, TextureBlock
-from EazySprite import EasySprite
 
 HERO_TYPE_ICON_PATH_DICT = {
     "attack" : "Fight_Mechanic/Static/Interface_Textures/attack_icon.png",
     "defense": "Fight_Mechanic/Static/Interface_Textures/defense_icon.png",
     "heal": "Fight_Mechanic/Static/Interface_Textures/heal_icon.png"
 }
+
 
 class MiniWindow:
     def __init__(self, mg_box):
@@ -179,12 +179,12 @@ class MiniGameInterface:
             class HealthBar:
                 def __init__(
                         self,
-                        center_x,
-                        center_y,
+                        center_x: int,
+                        center_y: int,
                         hero,
-                        width=100,
-                        height=10,
-                        health_factor=1
+                        width: int = 100,
+                        height: int = 10,
+                        health_factor: float = 1
                 ):
                     self.hero = hero
 
