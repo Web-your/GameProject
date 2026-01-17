@@ -14,19 +14,20 @@ class MiniWindow:
         window = mg_box.fight_box.window
 
         # Параметры окна
-        self.left = 150
-        self.right = 150
-        self.top = 50
+        self.width = 10 * 70
+        self.height = 10 * 70
+
         self.bottom = mg_box.interface.main_height + 50
+
+        self.center_x = window.center_x
+        self.center_y = self.bottom + self.height // 2
+
+        self.left = self.center_x - self.width // 2
+        self.right = self.center_x + self.width // 2
+        self.top = self.bottom + self.height
 
         self.x = self.left
         self.y = self.bottom
-
-        self.width = window.width - self.left - self.right
-        self.height = window.height - self.top - self.bottom
-
-        self.center_x = self.left + self.width // 2
-        self.center_y = self.bottom + self.height // 2
 
         # Декоративная рамки окна
         self.frame = self.Frame(self)
@@ -60,6 +61,18 @@ class MiniWindow:
 
         def draw(self):
             arcade.draw_rect_outline(self.rect, self.curr_color, self.curr_border_width)
+
+        def setup(self):
+            self.base_color = arcade.color.WHITE
+            self.base_border_width = 3
+
+            self.curr_color = self.base_color
+            self.curr_border_width = self.base_border_width
+
+            self.can_pulse = True
+            self.is_pulse = False
+            self.base_pulse_time = 0.2
+
 
         # Пульсация рамки - резкая кратковременная подсветка
         def start_pulse(self, color=None, border_width=None, time=None):
@@ -183,7 +196,7 @@ class MiniGameInterface:
                         center_y: int,
                         hero,
                         width: int = 100,
-                        height: int = 10,
+                        height: int = 20,
                         health_factor: float = 1
                 ):
                     self.hero = hero
@@ -197,6 +210,7 @@ class MiniGameInterface:
 
                     self.curr_health_color = arcade.color.GREEN
                     self.rest_health_color = arcade.color.RED
+                    self.frame_color = (100, 80, 80)
 
                 def update(self, new_health_factor):
                     self.health_factor = new_health_factor
@@ -224,6 +238,16 @@ class MiniGameInterface:
                         rest_health_width,
                         self.height,
                         self.rest_health_color
+                    )
+
+                    # Обводка
+                    arcade.draw_lbwh_rectangle_outline(
+                        self.center_x - self.width // 2,
+                        self.center_y - self.height // 2,
+                        self.width,
+                        self.height,
+                        self.frame_color,
+                        5
                     )
 
 

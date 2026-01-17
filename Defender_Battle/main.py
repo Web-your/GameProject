@@ -3,13 +3,13 @@
 # Name: Иван, Date: 07.01.2026, WhatYouDo: улучшил текстуры, коллизию, механики, добавил звуки, тряску, текст счёта
 
 import arcade
-from pyglet.graphics import Batch
 import random
 import math
+import EasySprite
 
 
 
-# Таймер (Динамический) - обновляет волны и окна --------------------------------------------------------------------->
+# Менеджер сцен - обновляет волны и окна --------------------------------------------------------------------->
 class SceneManager:
     def __init__(self, defender):
         self.df = defender
@@ -43,7 +43,7 @@ class SceneManager:
 
 
 
-# Сцены (динамические) --------------------------------------------------------------------->
+# Сцены --------------------------------------------------------------------->
 
 # Обратный отсчёт
 class StartScene:
@@ -70,7 +70,7 @@ class StartScene:
             arcade.schedule(self.next, self.tick) # Выставляем время для следующего обновления
 
 
-# Волна 1 - 3 механики: воспламеняющаяся доска, пули, кристаллы атаки
+# Волна 1 - 3 механики: воспламеняющаяся доска, пули, аура
 class WaveScene:
     def __init__(self, defender):
         self.df = defender
@@ -84,7 +84,7 @@ class WaveScene:
         self.bullet_mech = BulletMechanic(self.df)
         self.cristal_mech = CristalMechanic(self.df)
 
-        self.wave_time = 10 # Время волны
+        self.wave_time = 40 # Время волны
         self.pause1_time = 1.5 # Время после последнего воспламенения, когда активны спрайты
         self.pause2_time = 1.5 # Время до финиша, когда спрайты не активны
 
@@ -92,9 +92,11 @@ class WaveScene:
     def setup(self):
         self.df.window.show_view(self.df.wave_view)
         self.df.is_wave_active = True
+
         self.fire_board_mech.setup()
-        self.bullet_mech.setup()
-        self.cristal_mech.setup()
+        arcade.schedule(self.bullet_mech.setup, 2)
+        arcade.schedule(self.cristal_mech.setup, 2)
+
         self.player_music = arcade.play_sound(self.main_music, volume=0.5)
         arcade.schedule(self.stop, self.wave_time)
 
@@ -145,7 +147,6 @@ class FireBoardMechanic:
 
         self.board = defender.board
         self.player = defender.player
-        self.background = defender.background
 
         # Активна ли данная механика
         self.is_active_mech = False
@@ -173,8 +174,7 @@ class FireBoardMechanic:
 
         # Возвращаемся к обычному состоянию
         for cell in self.active_cells:
-            cell.texture = arcade.load_texture("Defender_Battle/Static/Cell_Textures/base.png")
-            cell.scale = cell.cell_size / 100
+            cell.texture = cell.texture_list[0]
 
         self.df.is_fire = False
         self.active_cells.clear()
@@ -198,16 +198,14 @@ class FireBoardMechanic:
     def change_for_danger(self, delta_time=0):
         arcade.unschedule(self.change_for_danger)
         for cell in self.active_cells:
-            cell.texture = arcade.load_texture("Defender_Battle/Static/Cell_Textures/danger.png")
-            cell.scale = cell.cell_size / 100
+            cell.texture = cell.texture_list[1]
         arcade.schedule(self.change_for_fire, self.danger_time)
 
     # Сменяем текстуру на огонь и включаем режим воспламенения
     def change_for_fire(self, delta_time=0):
         arcade.unschedule(self.change_for_fire)
         for cell in self.active_cells:
-            cell.texture = arcade.load_texture("Defender_Battle/Static/Cell_Textures/fire.png")
-            cell.scale = cell.cell_size / 100
+            cell.texture = cell.texture_list[2]
         self.df.is_fire = True
 
         # Эффекты звука и тряски
@@ -232,18 +230,18 @@ class BulletMechanic:
         self.is_active = False # Активна ли механика
         self.tick = 1.2 # Время между спавном новой пули
 
-    def setup(self):
+    def setup(self, delta_time=0):
+        arcade.unschedule(self.setup)
         self.is_active = True
         self.next()
 
     def next(self, delta_time=0):
-        board = self.board
         arcade.unschedule(self.next)
 
         if self.is_active:
-            top = board.indent_y + board.height * board.cell_size - 20
-            bottom = board.indent_y + 20
-            bullet = Bullet(self.df.width + 50, random.randrange(bottom, top), self.df)
+            top = self.df.top - 10
+            bottom = self.df.bottom + 10
+            bullet = Bullet(self.df.right + 50, random.randrange(bottom, top), self.df)
             self.df.bullet_list.append(bullet)
             arcade.schedule(self.next, self.tick)
 
@@ -265,7 +263,8 @@ class CristalMechanic:
         for cell in self.board.cells_list:
             self.free_cells.append(cell)
 
-    def setup(self):
+    def setup(self, delta_time=0):
+        arcade.unschedule(self.setup)
         self.is_active = True
         self.next()
 
@@ -275,8 +274,8 @@ class CristalMechanic:
         if self.is_active:
             cell = random.choice(self.free_cells)
             self.free_cells.remove(cell)
-            cristal = AttackCristal(cell.center_x, cell.center_y, self.free_cells, cell, self.df)
-            self.df.cristal_list.append(cristal)
+            cristal = AuraPoint(cell.center_x, cell.center_y, self.free_cells, cell, self.df)
+            self.df.aura_list.append(cristal)
             arcade.schedule(self.next, self.tick)
 
     def stop(self):
@@ -284,67 +283,48 @@ class CristalMechanic:
 
 
 
-# Окна (динамические) --------------------------------------------------------------------->
+# Окна --------------------------------------------------------------------->
 # Здесь прописываем, какие объекты отрисовывать и обновлять
 class StartView(arcade.View):
     def __init__(self, defender):
         super().__init__()
         self.df = defender
 
-    def setup(self):
-        ...
-
-    def on_show(self):
-        ...
-
-    def on_update(self, delta_time):
-        ...
-
     def on_draw(self):
         self.clear()
         df = self.df
 
-        df.background.draw()
         df.board.draw()
         df.countdown_list.draw()
+        df.mg_box.draw()
 
 
 class WaveView(arcade.View):
     def __init__(self, defender):
         super().__init__()
         self.df = defender
-
         self.keys_pressed = set()
-
-    def setup(self):
-        ...
-
-    def on_show(self):
-        ...
 
     def on_update(self, delta_time):
         self.df.camera_shake.update(delta_time)
 
         self.df.player.update(delta_time, self.keys_pressed)
         self.df.bullet_list.update(delta_time)
-        self.df.cristal_list.update(delta_time)
+        self.df.aura_list.update(delta_time)
 
     def on_draw(self):
         self.clear()
         df = self.df
 
-        self.df.camera_shake.update_camera()
-        self.df.camera.use()
-        df.background.draw()
+        df.camera_shake.update_camera()
+        df.camera.use()
         df.board.draw()
         df.player_list.draw()
+        df.aura_list.draw()
         df.bullet_list.draw()
-        df.cristal_list.draw()
 
-        self.df.interface_camera.use()
-        self.df.batch.draw()
-
-        df.main_scene_manager.fight_box.mini_window.draw()
+        df.interface_camera.use()
+        df.mg_box.draw()
 
     def on_key_press(self, key, modifiers):
         self.keys_pressed.add(key)
@@ -359,58 +339,17 @@ class FinishView(arcade.View):
         super().__init__()
         self.df = defender
 
-    def setup(self):
-        ...
-
-    def on_show(self):
-        ...
-
-    def on_update(self, delta_time):
-        ...
-
     def on_draw(self):
         self.clear()
         df = self.df
 
-        df.background.draw()
         df.board.draw()
         df.finish_list.draw()
+        df.mg_box.draw()
 
 
 
-# Объекты и спрайты (статичные) --------------------------------------------------------------------->
-
-# Фоновые объекты
-class Background:
-    def __init__(self, defender):
-        self.df = defender
-        self.fon = arcade.load_texture("Defender_Battle/Static/fon_black.png")
-
-        # Настройки пульсации при получении урона игроком
-        self.pulse_time = 0.5
-        self.is_pulse = False
-        self.pulse_color = (255, 0, 0, 100)
-
-    def draw(self):
-        df = self.df
-        # Отрисовка фона
-        rect = arcade.rect.XYWH(df.center_x, df.center_y, df.width, df.height)
-        arcade.draw_texture_rect(self.fon, rect)
-        # arcade.draw_rect_filled(rect, arcade.color.BLACK)
-
-        # Отрисовка пульсации
-        if self.is_pulse:
-            arcade.draw_lbwh_rectangle_outline(0, 0, df.width, df.height, self.pulse_color, 50)
-
-    def start_pulse(self):
-        if not self.is_pulse:
-            arcade.schedule(self.stop_pulse, self.pulse_time)
-            self.is_pulse = True
-
-    def stop_pulse(self, delta_time=0):
-        arcade.unschedule(self.stop_pulse)
-        self.is_pulse = False
-
+# Объекты и спрайты --------------------------------------------------------------------->
 
 # Спрайт обратного отсчёта
 class Countdown(arcade.Sprite):
@@ -419,13 +358,16 @@ class Countdown(arcade.Sprite):
 
         self.center_x = x
         self.center_y = y
-        self.scale = 2
-
-        self.textures = []
         self.curr_index = 0
-        for i in range(3, 0, -1):
-            texture = arcade.load_texture(f"Defender_Battle/Static/Start_Numbers/{i}.png")
-            self.textures.append(texture)
+
+        self.textures = EasySprite.Animate(
+            "Defender_Battle/Static/Textures/start_numbers.png",
+            3,
+            15
+        ).get_texture_lst()
+
+        self.texture = self.textures[0]
+        self.scale = 1
 
 
 # Спрайт - надпись в конце боя
@@ -435,31 +377,47 @@ class FinishText(arcade.Sprite):
 
         self.center_x = x
         self.center_y = y
-        self.texture = arcade.load_texture("Defender_Battle/Static/finish_text.png")
+        self.texture = arcade.load_texture("Defender_Battle/Static/Textures/finish_text.png")
         self.scale = 1
 
 
 # Спрайт клетки
 class Cell(arcade.Sprite):
-    def __init__(self, x, y, cell_size):
+    def __init__(self, x, y, board):
         super().__init__(x, y)
-        self.cell_size = cell_size
+        self.cell_size = board.cell_size
+        self.texture_list = board.cell_textures
 
         self.center_x = x
         self.center_y = y
-        self.texture = arcade.load_texture("Defender_Battle/Static/Cell_Textures/base.png")
-        self.scale = cell_size / 100
+
+        self.texture = self.texture_list[0]
+        self.scale = 1
 
 
 # Доска, состоит из клеток
 class Board:
     def __init__(self, defender):
         self.df = defender
+        self.frame = defender.mini_window.frame
 
-        scr_w = defender.width
-        scr_h = defender.height
+        self.cell_textures = EasySprite.Animate(
+            "Defender_Battle/Static/Textures/cell_textures.png",
+            3,
+            5
+        ).get_texture_lst()
 
+        # Параметры мини-окна
+        minw_w = defender.width
+        minw_h = defender.height
+        minw_x = defender.x
+        minw_y = defender.y
+        minw_center_x = defender.center_x
+        minw_center_y = defender.center_y
+
+        # Размер клетки
         self.cell_size = 70
+
         # Размеры поля в клетках
         self.width = 10
         self.height = 10
@@ -470,39 +428,29 @@ class Board:
         self.pulse_color = (255, 150, 0, 100)
 
         # Отступ поля
-        self.indent_x = (scr_w - self.width * self.cell_size) // 2
-        self.indent_y = (scr_h - self.height * self.cell_size) // 2
+        self.indent_x = minw_x + (minw_w - self.width * self.cell_size) // 2
+        self.indent_y = minw_y + (minw_h - self.height * self.cell_size) // 2
 
         # Центр поля
-        self.center_x = (self.width - self.indent_x) // 2
-        self.center_y = (self.height - self.indent_y) // 2
+        self.center_x = minw_center_x
+        self.center_y = minw_center_y
 
         self.cells_list = arcade.SpriteList()
         for row in range(self.height):
             for col in range(self.width):
                 x = self.indent_x + col * self.cell_size + self.cell_size // 2
                 y = self.indent_y + row * self.cell_size + self.cell_size // 2
-                cell = Cell(x, y, self.cell_size)
+                cell = Cell(x, y, self)
                 self.cells_list.append(cell)
 
     def draw(self):
         # Пульсация при воспламенении
         if self.df.is_fire:
-            color = self.pulse_color
-            border = 50
+            self.frame.curr_color = self.pulse_color
+            self.frame.curr_border_width = 10
         else:
-            color = self.frame_color
-            border = 25
-
-        # Подсветка доски
-        arcade.draw_lbwh_rectangle_outline(
-            self.indent_x,
-            self.indent_y,
-            self.width * self.cell_size,
-            self.height * self.cell_size,
-            color,
-            border
-        )
+            self.frame.curr_color = self.frame_color
+            self.frame.curr_border_width = 5
 
         # Отрисовка клеток
         self.cells_list.draw()
@@ -527,17 +475,28 @@ class Player(arcade.Sprite):
     def __init__(self, x, y, defender):
         super().__init__(x, y)
         self.df = defender
-
         self.board = defender.board
 
         # Здоровья потеряно при контакте с воспламенённой клеткой
         self.health_lose_boost = 1
 
         self.pl_size = 40
+
+        self.animate_textures = EasySprite.Animate(
+            "Defender_Battle/Static/Textures/player_animate.png",
+            1,
+            scale = self.pl_size / 15
+        ).get_texture_lst()
+
+        self.shield_texture = EasySprite.load_texture(
+            "Defender_Battle/Static/Textures/player_shield_pixel.png",
+            self.pl_size / 16
+        )
+
         self.center_x = x
         self.center_y = y
-        self.texture = arcade.load_texture("Defender_Battle/Static/Player_Textures/base.png")
-        self.scale = self.pl_size / 64
+        self.texture = self.shield_texture
+        self.scale = 1
 
         self.speed = 150
 
@@ -564,12 +523,10 @@ class Player(arcade.Sprite):
         # Если игрок не движется, то срабатывает щит, при нажатии на пробел
         if dx == 0 and dy == 0:
             self.is_shield = True
-            self.texture = arcade.load_texture("Defender_Battle/Static/Player_Textures/shield.png")
-            self.scale = self.pl_size / 100
+            self.texture = self.shield_texture
         else:
             self.is_shield = False
-            self.texture = arcade.load_texture("Defender_Battle/Static/Player_Textures/base.png")
-            self.scale = self.pl_size / 64
+            self.texture = self.animate_textures[0]
 
         # Проверка на границы - игрок ходит в пределах доски
         left = board.indent_x
@@ -593,15 +550,15 @@ class Player(arcade.Sprite):
             if self.df.is_fire and arcade.check_for_collision_with_list(self, self.df.active_cells):
                 damage_sound = arcade.load_sound("Defender_Battle/Static/Sounds/get_damage.wav")
                 arcade.play_sound(damage_sound, 3)
-                self.df.background.start_pulse()
+                # self.df.background.start_pulse()
                 self.df.health_lose += self.health_lose_boost
-                self.df.update_score_text()
                 self.was_damage_from_fire = True
         else:
             if not arcade.check_for_collision_with_list(self, self.df.active_cells):
                 self.was_damage_from_fire = False
             else:
-                self.df.background.start_pulse()
+                ...
+                # self.df.background.start_pulse()
 
 
 # Спрайт пули
@@ -615,13 +572,11 @@ class Bullet(arcade.Sprite):
 
         self.board = defender.board
         self.player = defender.player
-        self.background = defender.background
 
-        self.bul_size = 30
         self.center_x = x
         self.center_y = y
-        self.texture = arcade.load_texture("Defender_Battle/Static/bullet.png")
-        self.scale = self.bul_size / 100
+        self.texture = EasySprite.load_texture("Defender_Battle/Static/Textures/bullet_pixel.png", 3)
+        self.scale = 1
 
         self.speed = 100
 
@@ -643,11 +598,10 @@ class Bullet(arcade.Sprite):
     def check_for_collision(self):
         if arcade.check_for_collision(self, self.player):
             if not self.player.is_shield:
-                self.background.start_pulse()
+                # self.background.start_pulse()
                 damage_sound = arcade.load_sound("Defender_Battle/Static/Sounds/get_damage.wav")
                 arcade.play_sound(damage_sound, 3)
                 self.df.health_lose += self.health_lose_boost
-                self.df.update_score_text()
             else:
                 hit_sound = arcade.load_sound("Defender_Battle/Static/Sounds/hit_bullet_from_shield.wav")
                 arcade.play_sound(hit_sound, 1)
@@ -655,7 +609,7 @@ class Bullet(arcade.Sprite):
 
     def move_forward(self, delta_time):
         self.center_x -= self.speed * delta_time
-        if self.center_x < -100:
+        if self.center_x < self.df.x - 50:
             self.remove_from_sprite_lists()
 
     def move_to_player(self, delta_time):
@@ -671,8 +625,8 @@ class Bullet(arcade.Sprite):
         self.center_y -= dy
 
 
-# Спрайт кристалла для атаки
-class AttackCristal(arcade.Sprite):
+# Спрайт ауры
+class AuraPoint(arcade.Sprite):
     def __init__(self, x, y, free_cells, my_cell, defender):
         super().__init__(x, y)
         self.df = defender
@@ -683,16 +637,15 @@ class AttackCristal(arcade.Sprite):
         self.my_cell = my_cell
         self.free_cells = free_cells
 
-        self.cristal_size = 30
         self.center_x = x
         self.center_y = y
-        self.texture = arcade.load_texture("Defender_Battle/Static/attack_cristal.png")
-        self.scale = self.cristal_size / 100
+        self.texture = EasySprite.load_texture("Defender_Battle/Static/Textures/aura_point.png", 2)
+        self.scale = 1
 
         self.is_moved = False # Движется ли кристалл (движется к монстру, если его собрал игрок)
         # Конечная точка, куда движется кристалл, когда его собрал игрок
-        self.finish_x = defender.width + 50
-        self.finish_y = defender.height // 2
+        self.finish_x = defender.right + 50
+        self.finish_y = defender.center_x // 2
         self.speed = 150
 
     def update(self, delta_time):
@@ -704,7 +657,6 @@ class AttackCristal(arcade.Sprite):
                         cristal_sound = arcade.load_sound("Defender_Battle/Static/Sounds/get_cristal.wav")
                         arcade.play_sound(cristal_sound, 0.25)
                         self.df.damage_attack += self.damage_attack_boost
-                        self.df.update_score_text()
                         self.is_moved = True
             else:
                 self.remove_from_sprite_lists()
@@ -736,11 +688,27 @@ class DefenderBox:
         # Обязательно получаем основное окно при создании, чтобы переключаться между сценами
         self.window = main_scene_manager.window
 
-        # Параметры окна
-        self.width = self.window.width
-        self.height = self.window.height
-        self.center_x = self.window.center_x
-        self.center_y = self.window.center_y
+        self.fight_box = main_scene_manager.fight_box
+
+        # Дополнительные графические объекты
+        self.mg_box = self.fight_box.mg_box
+        # Мини-окно
+        self.mini_window = self.mg_box.mini_window
+
+        # Параметры мини-окна
+        self.left = self.mini_window.left
+        self.right = self.mini_window.right
+        self.top = self.mini_window.top
+        self.bottom = self.mini_window.bottom
+
+        self.x = self.mini_window.x
+        self.y = self.mini_window.y
+
+        self.width = self.mini_window.width
+        self.height = self.mini_window.height
+
+        self.center_x = self.mini_window.center_x
+        self.center_y = self.mini_window.center_y
 
         # Камера для тряски
         self.camera = arcade.camera.Camera2D()
@@ -761,8 +729,7 @@ class DefenderBox:
         self.active_cells = arcade.SpriteList() # Клетки поля, которые воспламеняются
         self.is_fire = False # Есть ли воспламенение
 
-        # Объекты и спрайты (статичные)
-        self.background = Background(self) # Фоновые объекты, такие как фон, подсветка, доп персонажи для красоты
+        # Объекты и спрайты
         self.board = Board(self) # Основное поле, по которому перемещается персонаж
 
         self.countdown = Countdown(self.center_x, self.center_y) # Спрайт с цифрами для обратного отсчёта
@@ -778,44 +745,19 @@ class DefenderBox:
         self.player_list.append(self.player)
 
         self.bullet_list = arcade.SpriteList() # Пули
-        self.cristal_list = arcade.SpriteList() # Кристаллы атаки
+        self.aura_list = arcade.SpriteList() # Аура
 
         # Очки за раунд
         self.health_lose = 0  # Здоровья потеряно у персонажа
         self.damage_attack = 0  # Урона нанесено врагу
 
-        self.batch = Batch()
-
-        self.damage_attack_text = arcade.Text(
-            f"Урона нанесено {self.damage_attack}",
-            40,
-            100,
-            arcade.color.WHITE,
-            font_size=16,
-            batch=self.batch
-        )
-
-        self.health_lose_text = arcade.Text(
-            f"Здоровья потеряно -{self.health_lose}",
-            40,
-            50,
-            arcade.color.WHITE,
-            font_size=16,
-            batch=self.batch
-        )
-
-        # Окна (динамические)
+        # Окна
         self.start_view = StartView(self)
         self.wave_view = WaveView(self)
         self.finish_view = FinishView(self)
 
-        # Собственный менеджер сцен (динамический) - обновляет волны и окна
+        # Собственный менеджер сцен - обновляет волны и окна
         self.scene_manager = SceneManager(self)
-
-    # Обновляет текст счёта
-    def update_score_text(self):
-        self.damage_attack_text.text = f"Урона нанесено {self.damage_attack}"
-        self.health_lose_text.text = f"Здоровья потеряно -{self.health_lose}"
 
 
 # Функция для запуска мини-игры защитника

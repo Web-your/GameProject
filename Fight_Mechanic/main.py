@@ -35,6 +35,7 @@ MINI_WINDOW_CENTER_Y = 420
 # Функция для переключения на меню
 def menu_setup(scene_manager, *settings):
     fight_box = scene_manager.fight_box
+    fight_box.mini_window.frame.setup()
     fight_box.window.show_view(fight_box.menu_view)
 
 
@@ -470,6 +471,7 @@ class FightBox:
         self.window = main_scene_manager.window # Ссылка на окно
 
         self.mg_box = MiniGameDopBox(self) # Доп объекты для мини-игры
+        self.mini_window = self.mg_box.mini_window
 
         # Параметры окна
         self.width = self.window.width

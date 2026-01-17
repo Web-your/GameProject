@@ -2,13 +2,9 @@
 # import arcade
 # import io
 #
-#
 # class EasySprite:
-#     def __init__(self):
-#         ...
-#
 #     @staticmethod
-#     def upscale_image( filename, scale):
+#     def upscale_image(filename, scale):
 #         img = Image.open(filename)
 #         scale_factor = scale
 #         new_size = (img.width * scale_factor, img.height * scale_factor)
@@ -82,14 +78,13 @@
 #             self.lst_img_texture = []
 #             for img in self.lst_img:
 #                 scale_factor = scale
-#                 new_size = (img.width * scale_factor, img.height * scale_factor)
+#                 new_size = (round(img.width * scale_factor), round(img.height * scale_factor))
 #                 new_img = img.resize(new_size, Image.NEAREST)
 #                 img_bytes = io.BytesIO()
 #                 new_img.save(img_bytes, format='PNG')
 #                 img_bytes.seek(0)
 #                 texture = arcade.load_texture(img_bytes)
 #                 self.lst_img_texture.append(texture)
-#
 #
 #         def sprite_sheet_to_animate(self, sprite_file, step=32, fps=1, automatic=None):
 #             img = Image.open(sprite_file)
@@ -104,82 +99,105 @@
 #                 img_bytes.seek(0)
 #                 texture = arcade.load_texture(img_bytes)
 #                 self.lst_img_texture.append(texture)
-#
 
 import arcade
-import EasySprite
-
-SCREEN_WIDTH = 900
-SCREEN_HEIGHT = 600
-SCREEN_TITLE = "Example"
+from PIL import Image
 
 
-class MyGame(arcade.Window):
-    def __init__(self, width, height, title):
-        super().__init__(width, height, title)
-        self.width = width
-        self.height = height
-
-        self.bomb_sprite = None
-        self.bomb_animate = None
-        self.bomb_sprite2 = None
-        self.lst_sprite = arcade.SpriteList()
-
-        self.c = 0
-        self.flag = True
-
-    def setup(self):
-        self.bomb_sprite = Bomb() # Анимация с помощью доп класса
-        self.bomb_sprite.center_x = self.width // 2
-        self.bomb_sprite.center_y = self.height // 4
-
-        self.bomb_animate = EasySprite.Animate("bomb-Sheet.png", scale=10, fps=4, step=16)  # Анимация напрямую
-        self.bomb_sprite2 = arcade.Sprite(self.bomb_animate.give_current_texture())
-        self.bomb_sprite2.center_x = self.width // 2
-        self.bomb_sprite2.center_y = self.height // 4 * 3
-
-        self.bomb_sprite.animate.resize_all(0.5)
-
-        self.lst_sprite.append(self.bomb_sprite)
-        self.lst_sprite.append(self.bomb_sprite2)
-
-    def on_draw(self):
-        self.clear()
-        self.lst_sprite.draw()
-
-    def on_update(self, delta_time):
-        self.c += delta_time
-        # if 10 > self.c >= 5:
-        #     self.bomb_sprite.animate.stop()
-        if self.c >= 5 and self.flag:
-            self.bomb_sprite.animate.setup(4, False)
-            self.flag = False
-        """Передаем delta_time в update_animation"""
-        self.bomb_sprite.update_animation(delta_time)
-        self.bomb_sprite2.texture = self.bomb_animate.update_and_give(delta_time)
+def load_image(image_path: str, scale: float = 1):
+    image = Image.open(image_path)
+    image = resize(image, scale)
+    return image
 
 
-class Bomb(arcade.Sprite):
-    def __init__(self):
-        super().__init__()
-        self.animate = EasySprite.Animate("bomb-Sheet.png", scale=10, fps=4, step=16)
-        self.texture = self.animate.give_current_texture()
+def load_texture(obj: str | Image.Image, scale: float = 1):
+    if isinstance(obj, str):
+        image = load_image(obj, scale)
+    elif isinstance(obj, Image.Image):
+        image = resize(obj, scale)
+    else:
+        raise TypeError('texture must be str or Image')
 
-    def update_animation(self, delta_time):
-        # Передаем delta_time в update_and_give
-        self.texture = self.animate.update_and_give(delta_time)
-
-
-def setup_game(width=900, height=600, title="Flying squares", side=100, color="#ff40ff"):
-    game = MyGame(width, height, title)
-    game.setup()
-    return game
+    texture = arcade.Texture(image)
+    return texture
 
 
-def main():
-    setup_game(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
-    arcade.run()
+def resize(obj: str | Image.Image, scale: float = 1):
+    if isinstance(obj, Image.Image):
+        return resize_image(obj, scale)
+    elif isinstance(obj, arcade.Texture):
+        return resize_texture(obj, scale)
+    else:
+        raise TypeError('texture must be str or Image')
 
 
-if __name__ == "__main__":
-    main()
+def resize_image(image: Image.Image, scale: float):
+    new_size = (round(image.width * scale), round(image.height * scale))
+    image = image.resize(new_size, Image.Resampling.NEAREST)
+    return image
+
+
+def resize_texture(texture: arcade.Texture, scale: float):
+    image = texture.image
+    new_image = resize_image(image, scale)
+    texture = arcade.Texture(new_image)
+    return texture
+
+
+class Animate:
+    def __init__(
+            self,
+            obj: str | Image.Image,
+            scale: float = 1,
+            step: int = 32,
+            fps: int = 1,
+            is_animate: bool = True,
+            start_index: int = 0,
+    ):
+        image = load_image(obj, scale)
+
+        self.texture_lst = []
+        self.fps = fps
+        self.step = round(step * scale)
+        self.change_time = 0
+        self.current_texture = start_index
+
+        for i in range(image.width // self.step):
+            img_shot = image.crop((i * self.step, 0, (i + 1) * self.step, image.height))
+            texture = arcade.Texture(img_shot)
+            self.texture_lst.append(texture)
+
+        self.is_animate = is_animate
+
+    def update(self, delta_time):
+        if self.is_animate:
+            self.change_time += delta_time
+            if self.change_time >= 1 / self.fps:
+                self.change_time = 0
+                self.current_texture += 1
+                if self.current_texture >= len(self.texture_lst):
+                    self.current_texture = 0
+
+    def update_and_give(self, delta_time):
+        if self.is_animate:
+            self.update(delta_time)
+        return self.texture_lst[self.current_texture]
+
+    def give_current_texture(self):
+        return self.texture_lst[self.current_texture]
+
+    def resize_all(self, scale: float):
+        self.step *= scale
+        for i, texture in enumerate(self.texture_lst):
+            self.texture_lst[i] = resize_texture(texture, scale)
+
+    def start(self):
+        self.is_animate = True
+
+    def stop(self):
+        self.is_animate = False
+
+    def setup(self, start_index: int = 0, is_animate: bool = True):
+        self.current_texture = start_index
+        self.change_time = 0
+        self.is_animate = is_animate

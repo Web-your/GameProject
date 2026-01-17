@@ -15,7 +15,7 @@ class SceneManager:
 
 
 if __name__ == "__main__":
-    main_window = arcade.Window(1000, 800, "Общая битва", resizable=False, fullscreen=False)
+    main_window = arcade.Window(1000, 800, "Общая битва", resizable=False, fullscreen=True)
     scene_manager = SceneManager(main_window)
     scene_manager.setup()
     arcade.run()
