@@ -97,7 +97,7 @@ class WaveScene:
         arcade.schedule(self.bullet_mech.setup, 2)
         arcade.schedule(self.cristal_mech.setup, 2)
 
-        self.player_music = arcade.play_sound(self.main_music, volume=0.5)
+        self.player_music = arcade.play_sound(self.main_music, volume=0)
         arcade.schedule(self.stop, self.wave_time)
 
     # Останавливаем механики

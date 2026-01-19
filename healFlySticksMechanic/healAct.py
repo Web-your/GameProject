@@ -7,10 +7,6 @@ import sys
 import os
 
 '''Константы'''
-# Настройки окна мини-игры
-GAME_WIDTH = 800
-GAME_HEIGHT = 250
-
 # Настройка элементов
 STICK_WIDTH = 30
 STICK_HEIGHT = 80
@@ -26,7 +22,7 @@ BACKGROUND_HEIGHT = 120
 
 # Палочки
 class HealActThingy(arcade.Sprite):
-    def __init__(self, x_offset=0, from_right=False, is_trick=False, is_jumper=False):
+    def __init__(self, view, x_offset=0, from_right=False, is_trick=False, is_jumper=False):
         super().__init__()
 
         self.is_trick = is_trick
@@ -35,8 +31,8 @@ class HealActThingy(arcade.Sprite):
         self.has_jumped_over_field = False
         self.jump_progress = 0
         self.jump_direction = 1
-        self.original_y = GAME_HEIGHT // 2
-        self.field_center_x = GAME_WIDTH // 2
+        self.original_y = view.center_y
+        self.field_center_x = view.center_x
 
         # Определяем путь к текстурам относительно текущего файла
         current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -70,7 +66,7 @@ class HealActThingy(arcade.Sprite):
 
         # Настройка стороны
         if from_right:
-            self.center_x = GAME_WIDTH + STICK_WIDTH + x_offset
+            self.center_x = view.center_x + STICK_WIDTH + x_offset
             self.change_x = -STICK_SPEED
         else:
             self.center_x = -STICK_WIDTH - x_offset
@@ -143,8 +139,27 @@ class HealActThingy(arcade.Sprite):
 class HealTestView(arcade.View):
     """Вью для мини-игры Heal Test"""
 
-    def __init__(self, on_complete_callback=None, target_hero_index=0, parent_view=None):
+    def __init__(self, main_scene_manager, target_hero_index=0, parent_view=None):
         super().__init__()
+        self.main_scene_manager = main_scene_manager
+        self.f_box = main_scene_manager.fight_box
+        self.mg_box = self.f_box.mg_box
+        self.mini_window = self.mg_box.mini_window
+
+        # Параметры мини-окна
+        self.mw_left = self.mini_window.left
+        self.mw_right = self.mini_window.right
+        self.mw_top = self.mini_window.top
+        self.mw_bottom = self.mini_window.bottom
+
+        self.mw_x = self.mini_window.x
+        self.mw_y = self.mini_window.y
+
+        self.mw_width = self.mini_window.width
+        self.mw_height = self.mini_window.height
+
+        self.mw_center_x = self.mini_window.center_x
+        self.mw_center_y = self.mini_window.center_y
 
         self.stick_list = None
         self.field_list = None
@@ -163,7 +178,7 @@ class HealTestView(arcade.View):
         self.should_close = False
 
         # Колбэк для возврата в основную игру
-        self.on_complete_callback = on_complete_callback
+        self.on_complete_callback = main_scene_manager.next_scene
 
         # Какого героя лечим
         self.target_hero_index = target_hero_index
@@ -227,8 +242,8 @@ class HealTestView(arcade.View):
             background = arcade.Sprite(texture_path)
             background.width = BACKGROUND_WIDTH
             background.height = BACKGROUND_HEIGHT
-            background.center_x = GAME_WIDTH // 2
-            background.center_y = GAME_HEIGHT // 2
+            background.center_x = self.mw_center_x
+            background.center_y = self.mw_center_y
 
             self.background_left_edge = background.center_x - (background.width / 2)
             self.background_right_edge = background.center_x + (background.width / 2)
@@ -236,7 +251,7 @@ class HealTestView(arcade.View):
             self.background_list.append(background)
         except:
             self.background_left_edge = 0
-            self.background_right_edge = GAME_WIDTH
+            self.background_right_edge = self.mw_width
 
     # Центральная часть
     def load_interaction_field(self):
@@ -253,8 +268,8 @@ class HealTestView(arcade.View):
         scale_h = FIELD_HEIGHT / field_sprite.height
         field_sprite.scale = min(scale_w, scale_h)
 
-        field_sprite.center_x = GAME_WIDTH // 2
-        field_sprite.center_y = GAME_HEIGHT // 2
+        field_sprite.center_x = self.mw_center_x
+        field_sprite.center_y = self.mw_center_y
 
         self.field_list.append(field_sprite)
 
@@ -263,7 +278,7 @@ class HealTestView(arcade.View):
         x_offset = 0
 
         for i in range(count):
-            stick = HealActThingy(x_offset, from_right, is_trick, is_jumper)
+            stick = HealActThingy(self, x_offset, from_right, is_trick, is_jumper)
 
             min_distance = 10
             max_distance = 100
@@ -284,13 +299,15 @@ class HealTestView(arcade.View):
         self.clear(arcade.color.BLACK)
 
         # Позиция мини-игры на экране (по центру)
-        game_x = self.window.width // 2 - GAME_WIDTH // 2
-        game_y = self.window.height // 2 - GAME_HEIGHT // 2
+        game_x = self.mw_center_x
+        game_y = self.mw_center_y
 
         # Рисуем мини-игру
         self.background_list.draw()
         self.field_list.draw()
         self.stick_list.draw()
+
+        self.mg_box.draw()
 
     # Удаление лишних палок
     def clean_inactive_sticks(self):
@@ -363,7 +380,7 @@ class HealTestView(arcade.View):
         # Удаление палочек за пределами экрана
         for stick in self.stick_list:
             if (stick.from_right and stick.center_x < -STICK_WIDTH) or \
-                    (not stick.from_right and stick.center_x > GAME_WIDTH + STICK_WIDTH):
+                    (not stick.from_right and stick.center_x > self.mw_width + STICK_WIDTH):
                 stick.active = False
 
         # Проверка завершения игры
@@ -392,5 +409,5 @@ class HealTestView(arcade.View):
 
 
 def setup_heal(main_scene_manager, *settings):
-    heal_view = HealTestView(on_complete_callback=main_scene_manager.next_scene)
+    heal_view = HealTestView(main_scene_manager)
     main_scene_manager.window.show_view(heal_view)
