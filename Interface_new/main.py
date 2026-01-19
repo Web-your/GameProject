@@ -1,4 +1,4 @@
-""" Name: Максим | Date: 19.01.2026 | WhatYouDo: Обновил интерфейс а также добавил комментарии(буду ещё фиксить) """
+""" Name: Максим | Date: 19.01.2026 | WhatYouDo: Исправил интерфейс """
 from PIL import Image
 import arcade
 import io
@@ -18,8 +18,9 @@ STATE_NORMAL = "normal"
 STATE_SELECTION = "selection"
 STATE_ALL_SELECTED = "all_selected"
 
-
 '''Юрин класс'''
+
+
 class EasySprite:
     @staticmethod
     def upscale_image(filename, scale):
@@ -32,6 +33,7 @@ class EasySprite:
         img_bytes.seek(0)
         texture = arcade.load_texture(img_bytes)
         return texture
+
     @staticmethod
     def upscale_texture(img, scale):
         scale_factor = scale
@@ -44,10 +46,6 @@ class EasySprite:
         return texture
 
 
-"""
-'Покинь надежду, всяк сюда входящий'
-Сломанный код может быть после этой точки, продвигайтесь с осторожностью
-"""
 class InterfaceView(arcade.View):
     def __init__(self):
         super().__init__()
@@ -112,6 +110,7 @@ class InterfaceView(arcade.View):
         self.update_button_indicator()
 
     """Загрузка всех текстур для интерфейса"""
+
     def load_textures(self):
         try:
             self.zone_texture = EasySprite.upscale_image("Field.png", 2)
@@ -168,6 +167,7 @@ class InterfaceView(arcade.View):
             )
 
     """Создание спрайта кнопки с текстурой или цветом"""
+
     def create_button_sprite(self, x, y, texture_name, width, height, is_dropdown=False, is_first_button=False):
         normal_color = self.textures.get(texture_name + '_color', arcade.color.DARK_GRAY)
         active_color = self.textures.get(texture_name + '_color_active', arcade.color.GRAY)
@@ -226,6 +226,7 @@ class InterfaceView(arcade.View):
         return sprite
 
     """Создание спрайта зоны с текстурой или цветом"""
+
     def create_zone_sprite(self, x, y, width, height, zone_index):
         if self.zone_texture:
             sprite = arcade.Sprite()
@@ -249,6 +250,7 @@ class InterfaceView(arcade.View):
         return sprite
 
     """Создание всех элементов интерфейса: зон, иконок и кнопок"""
+
     def create_interface(self):
         zone_width = (self.main_panel_width - PANEL_MARGIN * 4) // 3 - 60
         zone_height = 80
@@ -318,6 +320,7 @@ class InterfaceView(arcade.View):
                 self.buttons_list.append(button_sprite)
 
     """Обновление позиции индикатора выбранной кнопки"""
+
     def update_button_indicator(self):
         for button in self.buttons_list:
             if (button.zone_index == self.selected_button_zone and
@@ -332,6 +335,7 @@ class InterfaceView(arcade.View):
                 break
 
     """Перемещение выбора кнопок в обычном режиме"""
+
     def move_button_selection(self, direction):
         if self.ui_state != STATE_NORMAL:
             return
@@ -367,6 +371,7 @@ class InterfaceView(arcade.View):
         self.update_button_indicator()
 
     """Подтверждение выбора кнопки в обычном режиме"""
+
     def confirm_button_selection(self):
         if self.ui_state != STATE_NORMAL:
             return
@@ -404,8 +409,9 @@ class InterfaceView(arcade.View):
                 self.update_button_indicator()
                 return
 
+    """Создание окна выбора целей или предметов"""
+
     def create_selection_zone(self, selection_type, zone_index):
-        """Создание окна выбора целей или предметов"""
         if self.ui_state == STATE_ALL_SELECTED:
             return
 
@@ -416,17 +422,17 @@ class InterfaceView(arcade.View):
         if selection_type == 'actionIcon_1':
             title = "Выбор цели для атаки"
             item_prefix = "Враг"
-            column2_items = ["Цель 1", "Цель 2"]  # Пользовательские тексты для второй колонки
+            column2_items = ["Персонаж 1", "Персонаж 2"]
         elif selection_type == 'actionIcon_2':
             title = "Выбор цели для защиты"
             item_prefix = "Союзник"
-            column2_items = ["Защита 1", "Защита 2"]
+            column2_items = ["Персонаж 1", "Персонаж 2"]
         elif selection_type == 'actionIcon_3':
             title = "Выбор цели для лечения"
             item_prefix = "Пациент"
-            column2_items = ["Лечение 1", "Лечение 2"]
+            column2_items = ["Персонаж 1", "Персонаж 2"]
         elif selection_type == 'itemIcon':
-            title = "Выбор предмета"
+            title = None  # Убрали заголовок для выбора предметов
             item_prefix = "Предмет"
             column2_items = ["Предмет 1", "Предмет 2", "Предмет 3"]
 
@@ -453,16 +459,15 @@ class InterfaceView(arcade.View):
         # Настройка колонок в зависимости от типа выбора
         if selection_type in ['actionIcon_1', 'actionIcon_2', 'actionIcon_3']:
             column_count = 2
-            column_spacing = 250
+            column_spacing = 165
             items_per_column = 3
         else:
             column_count = 3
-            column_spacing = 120
+            column_spacing = 140
             items_per_column = 3
 
         # Создание колонок и элементов
         for col in range(column_count):
-            # ПОЗИЦИЯ КОЛОНКИ СДВИНУТА ВПРАВО (было 70, стало 120)
             column_x = 90 + col * column_spacing
             column_items = []
 
@@ -509,8 +514,7 @@ class InterfaceView(arcade.View):
 
         # Настройка разделителя между колонками
         if selection_type in ['actionIcon_1', 'actionIcon_2', 'actionIcon_3']:
-            # ПОЗИЦИЯ РАЗДЕЛИТЕЛЯ ТОЖЕ СДВИНУТА ВПРАВО
-            self.divider_x = 120 + 0.7 * column_spacing
+            self.divider_x = 70 + 0.7 * column_spacing
             self.divider_visible = True
         else:
             self.divider_x = None
@@ -519,6 +523,7 @@ class InterfaceView(arcade.View):
         self.update_selection_indicator()
 
     """Обновление индикатора выбора в окне выбора"""
+
     def update_selection_indicator(self):
         if not self.selection_items:
             return
@@ -535,6 +540,7 @@ class InterfaceView(arcade.View):
         self.selected_item_index = 0
 
     """Запуск режима выбора целей/предметов"""
+
     def start_selection_mode(self, selection_type, zone_index):
         if self.ui_state == STATE_ALL_SELECTED:
             return
@@ -544,6 +550,7 @@ class InterfaceView(arcade.View):
         print(f"Режим выбора: {selection_type} (Зона {zone_index + 1})")
 
     """Сброс текущего режима выбора"""
+
     def reset_selection(self):
         self.ui_state = STATE_NORMAL
         self.selection_zone = None
@@ -555,6 +562,7 @@ class InterfaceView(arcade.View):
         print("Текущий выбор сброшен.")
 
     """Перемещение выбора в окне выбора"""
+
     def move_selection(self, direction):
         if not self.selection_items:
             return
@@ -594,6 +602,7 @@ class InterfaceView(arcade.View):
         }
 
     """Подтверждение выбора в окне выбора"""
+
     def confirm_selection(self):
         if not self.selection_items:
             return
@@ -645,6 +654,7 @@ class InterfaceView(arcade.View):
             self.move_to_next_zone()
 
     """Мгновенный выбор для кнопки ауры (без окна выбора)"""
+
     def immediate_auro_dop_selection(self, zone_index):
         if self.ui_state == STATE_ALL_SELECTED:
             return
@@ -690,11 +700,13 @@ class InterfaceView(arcade.View):
             self.update_button_indicator()
 
     """Обновление текстуры кнопки при наведении"""
+
     def update_button_texture(self, button, is_hovered):
         if is_hovered != button.is_hovered:
             button.is_hovered = is_hovered
 
     """Добавление единицы ауры"""
+
     def add_aura(self):
         self.aura += 1
         if self.aura > self.max_aura:
@@ -702,6 +714,7 @@ class InterfaceView(arcade.View):
         print(f"Аура: {self.aura}/{self.max_aura}")
 
     """Отрисовка счётчика ауры в панели"""
+
     def draw_aura_counter_in_panel(self, panel_x, panel_y):
         aura_start_x = panel_x - self.small_panel_width / 2 + 25
         aura_y = panel_y
@@ -756,6 +769,7 @@ class InterfaceView(arcade.View):
         )
 
     """Отрисовка минимизированного счётчика ауры (в режиме всех выбрано)"""
+
     def draw_aura_counter_minimized(self):
         panel_x = 90
         panel_y = 40
@@ -772,6 +786,7 @@ class InterfaceView(arcade.View):
         self.draw_aura_counter_in_panel(panel_x, panel_y)
 
     """Отрисовка окна выбора целей/предметов"""
+
     def draw_selection_zone(self):
         if not self.selection_zone:
             return
@@ -786,23 +801,24 @@ class InterfaceView(arcade.View):
         arcade.draw_rect_filled(zone_rect, self.selection_zone['color'])
         arcade.draw_rect_outline(zone_rect, arcade.color.LIGHT_GRAY, 2)
 
-        # Заголовок окна
-        arcade.draw_text(
-            self.selection_zone['title'],
-            self.selection_zone['x'],
-            self.selection_zone['y'] + self.selection_zone['height'] // 2 - 15,
-            arcade.color.LIGHT_GRAY,
-            16,
-            anchor_x="center",
-            anchor_y="center",
-            bold=True
-        )
+        # Заголовок окна (только если он задан)
+        if self.selection_zone['title']:
+            arcade.draw_text(
+                self.selection_zone['title'],
+                self.selection_zone['x'],
+                self.selection_zone['y'] + self.selection_zone['height'] // 2 - 15,
+                arcade.color.LIGHT_GRAY,
+                16,
+                anchor_x="center",
+                anchor_y="center",
+                bold=True
+            )
 
         # Разделитель между колонками (для action кнопок)
         if self.divider_visible and self.divider_x and self.current_selection_type in ['actionIcon_1', 'actionIcon_2',
                                                                                        'actionIcon_3']:
-            divider_top = self.selection_zone['y'] + 50
-            divider_bottom = self.selection_zone['y'] - 50
+            divider_top = self.selection_zone['y'] + 69
+            divider_bottom = self.selection_zone['y'] - 69
 
             arcade.draw_line(
                 self.divider_x, divider_top,
@@ -849,6 +865,7 @@ class InterfaceView(arcade.View):
             arcade.draw_rect_outline(indicator_rect, arcade.color.RED, 3)
 
     """Основной метод отрисовки интерфейса"""
+
     def on_draw(self):
         self.clear()
 
@@ -999,14 +1016,17 @@ class InterfaceView(arcade.View):
                 )
 
     """Обработка движения мыши"""
+
     def on_mouse_motion(self, x, y, dx, dy):
         pass
 
     """Обработка нажатия кнопок мыши"""
+
     def on_mouse_press(self, x, y, button, modifiers):
         pass
 
     """Обработка нажатия клавиш клавиатуры"""
+
     def on_key_press(self, key, modifiers):
         # Добавление ауры
         if key == arcade.key.M:
