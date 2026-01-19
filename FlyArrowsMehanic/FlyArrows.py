@@ -64,10 +64,10 @@ class AttackView(arcade.View):
         self.keys_pressed = set()
 
         self.all_arrow_sprites = arcade.SpriteList()
-        self.keys_pressed_last_0 = None
-        self.keys_pressed_last_1 = None
-        self.keys_pressed_last_2 = None
-        self.keys_pressed_last_3 = None
+        self.keys_last_0 = None
+        self.keys_last_1 = None
+        self.keys_last_2 = None
+        self.keys_last_3 = None
 
         self.long_arrow_0 = []
         self.long_arrow_1 = []
@@ -105,9 +105,9 @@ class AttackView(arcade.View):
             for i, tarrow in self.arrows_0:
                 if i - 0.2 < self.keys_pressed_0 < i + 0.2 and tarrow <= 1:
                     self.detect_sprite_0.scale = 0.6
-                    if self.keys_pressed_0 != self.keys_pressed_last_0:
+                    if i != self.keys_last_0:
                         self.count += 1
-                        self.keys_pressed_last_0 = self.keys_pressed_0
+                        self.keys_last_0 = i
                     break
                 elif (i - 0.2 < self.keys_pressed_0 < i + 0.2 and tarrow > 1 and
                       i + (tarrow - 1) * self.cycle_time + 0.2 > self.total_time):
@@ -127,9 +127,9 @@ class AttackView(arcade.View):
             for i, tarrow in self.arrows_3:
                 if i - 0.2 < self.keys_pressed_3 < i + 0.2 and tarrow <= 1:
                     self.detect_sprite_3.scale = 0.6
-                    if self.keys_pressed_3 != self.keys_pressed_last_3:
+                    if i != self.keys_last_3:
                         self.count += 1
-                        self.keys_pressed_last_3 = self.keys_pressed_3
+                        self.keys_last_3 = i
                     break
                 elif (i - 0.2 < self.keys_pressed_3 < i + 0.2 and tarrow > 1 and
                           i + (tarrow - 1) * self.cycle_time + 0.2 > self.total_time):
@@ -149,9 +149,9 @@ class AttackView(arcade.View):
             for i, tarrow in self.arrows_1:
                 if i - 0.2 < self.keys_pressed_1 < i + 0.2 and tarrow <= 1:
                     self.detect_sprite_1.scale = 0.6
-                    if self.keys_pressed_1 != self.keys_pressed_last_1:
+                    if i != self.keys_last_1:
                         self.count += 1
-                        self.keys_pressed_last_1 = self.keys_pressed_1
+                        self.keys_last_1 = i
                     break
                 elif (i - 0.2 < self.keys_pressed_1 < i + 0.2 and tarrow > 1 and
                           i + (tarrow - 1) * self.cycle_time + 0.2 > self.total_time):
@@ -171,9 +171,9 @@ class AttackView(arcade.View):
             for i, tarrow in self.arrows_2:
                 if i - 0.2 < self.keys_pressed_2 < i + 0.2 and tarrow <= 1:
                     self.detect_sprite_2.scale = 0.6
-                    if self.keys_pressed_2 != self.keys_pressed_last_2:
+                    if i != self.keys_last_2:
                         self.count += 1
-                        self.keys_pressed_last_2 = self.keys_pressed_2
+                        self.keys_last_2 = i
                     break
                 elif (i - 0.2 < self.keys_pressed_2 < i + 0.2 and tarrow > 1 and
                           i + (tarrow - 1) * self.cycle_time + 0.2 > self.total_time):
