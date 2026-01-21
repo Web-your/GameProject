@@ -460,6 +460,27 @@ class Interface:
                     return
 
 
+# Герой
+class Hero:
+    def __init__(self, type):
+        self.type = type
+        self.health = 1
+
+
+# Список героев
+class HeroList:
+    def __init__(self, fb):
+        self.fb = fb
+        self.type_hero_dict = {
+            "attack": Hero("attack"),
+            "defense": Hero("defense"),
+            "heal": Hero("heal")
+        }
+    
+    def get_hero(self, h_type):
+        return self.type_hero_dict[h_type]
+
+
 
 # Главное для запуска битвы
 # <-------------------------------------------------------------------------------------------------------------------
@@ -479,7 +500,13 @@ class FightBox:
         self.center_x = self.window.center_x
         self.center_y = self.window.center_y
 
-        self.interface = Interface(self) # Интерфейс
+        # Создание системных героев
+        self.hero_list = HeroList(self)
+        self.attack_hero = self.hero_list.get_hero("attack")
+        self.defense_hero = self.hero_list.get_hero("defense")
+        self.heal_hero = self.hero_list.get_hero("heal_hero")
+
+        self.interface = Interface(self)  # Интерфейс
 
         self.scene_manager = SceneManager(self)  # Собственный менеджер сцен
         self.menu_view = MenuView(self)  # Окно отрисовки меню
