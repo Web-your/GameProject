@@ -20,7 +20,7 @@ class SceneManager:
         finish_scene = FinishScene(defender)
 
         # Добавляем сцены в очередь
-        self.timeline = [start_scene, wave_scene, finish_scene]
+        self.timeline = [wave_scene]
         self.curr_index = 0
 
         # Вызываем следующую сцену
@@ -84,7 +84,7 @@ class WaveScene:
         self.bullet_mech = BulletMechanic(self.df)
         self.cristal_mech = CristalMechanic(self.df)
 
-        self.wave_time = 40 # Время волны
+        self.wave_time = 20 # Время волны
         self.pause1_time = 1.5 # Время после последнего воспламенения, когда активны спрайты
         self.pause2_time = 1.5 # Время до финиша, когда спрайты не активны
 
@@ -93,9 +93,12 @@ class WaveScene:
         self.df.window.show_view(self.df.wave_view)
         self.df.is_wave_active = True
 
-        self.fire_board_mech.setup()
-        arcade.schedule(self.bullet_mech.setup, 2)
-        arcade.schedule(self.cristal_mech.setup, 2)
+        # self.fire_board_mech.setup()
+        # arcade.schedule(self.bullet_mech.setup, 2)
+        # arcade.schedule(self.cristal_mech.setup, 2)
+
+        self.bullet_mech.setup()
+        self.cristal_mech.setup()
 
         self.player_music = arcade.play_sound(self.main_music, volume=0)
         arcade.schedule(self.stop, self.wave_time)
@@ -106,6 +109,8 @@ class WaveScene:
         self.bullet_mech.stop()
         self.cristal_mech.stop()
         self.fire_board_mech.stop()
+
+        arcade.schedule(self.stop_next, self.pause1_time)
 
     # Останавливаем спрайты, когда завершится последнее воспламенение
     def stop_next(self, delta_time=0):
@@ -128,7 +133,7 @@ class FinishScene:
     def setup(self):
         self.df.window.show_view(self.df.finish_view) # Включаем нужное окно
         finish_sound = arcade.load_sound("Defender_Battle/Static/Sounds/finish_sound.wav")
-        arcade.play_sound(finish_sound)
+        arcade.play_sound(finish_sound, 0)
         arcade.schedule(self.next_scene, self.finish_time)
 
     def next_scene(self, delta_time=0):
@@ -210,7 +215,7 @@ class FireBoardMechanic:
 
         # Эффекты звука и тряски
         fire_sound = arcade.load_sound("Defender_Battle/Static/Sounds/fire_sound.wav")
-        arcade.play_sound(fire_sound, 1.5)
+        arcade.play_sound(fire_sound, 0)
         self.df.camera_shake.start()
 
         arcade.schedule(self.next, self.fire_time)
@@ -239,9 +244,8 @@ class BulletMechanic:
         arcade.unschedule(self.next)
 
         if self.is_active:
-            top = self.df.top - 10
-            bottom = self.df.bottom + 10
-            bullet = Bullet(self.df.right + 50, random.randrange(bottom, top), self.df)
+            spawn_place = random.choice(["top", "bottom", "left", "right"])
+            bullet = Bullet(spawn_place, self.df)
             self.df.bullet_list.append(bullet)
             arcade.schedule(self.next, self.tick)
 
@@ -318,7 +322,7 @@ class WaveView(arcade.View):
 
         df.camera_shake.update_camera()
         df.camera.use()
-        df.board.draw()
+        # df.board.draw()
         df.player_list.draw()
         df.aura_list.draw()
         df.bullet_list.draw()
@@ -483,7 +487,7 @@ class Player(arcade.Sprite):
         self.pl_size = 40
 
         self.animate_textures = EasySprite.Animate(
-            "Defender_Battle/Static/Textures/player_animate.png",
+            "Defender_Battle/Static/Textures/Heart.png",
             1,
             scale = self.pl_size / 15
         ).get_texture_lst()
@@ -549,7 +553,7 @@ class Player(arcade.Sprite):
         if not self.was_damage_from_fire:
             if self.df.is_fire and arcade.check_for_collision_with_list(self, self.df.active_cells):
                 damage_sound = arcade.load_sound("Defender_Battle/Static/Sounds/get_damage.wav")
-                arcade.play_sound(damage_sound, 3)
+                arcade.play_sound(damage_sound, 0)
                 # self.df.background.start_pulse()
                 self.df.health_lose += self.health_lose_boost
                 self.was_damage_from_fire = True
@@ -563,8 +567,8 @@ class Player(arcade.Sprite):
 
 # Спрайт пули
 class Bullet(arcade.Sprite):
-    def __init__(self, x, y, defender):
-        super().__init__(x, y)
+    def __init__(self, spawn_place, defender):
+        super().__init__()
         self.df = defender
 
         # Сколько урона нанесено игроку от 1 пули
@@ -573,56 +577,92 @@ class Bullet(arcade.Sprite):
         self.board = defender.board
         self.player = defender.player
 
-        self.center_x = x
-        self.center_y = y
+        self.spawn_place = spawn_place
+        self.indent = 15
+
+        if self.spawn_place == "top":
+            self.center_x = random.randrange(round(self.df.left + self.indent), round(self.df.right - self.indent))
+            self.center_y = self.df.top + self.indent
+        elif self.spawn_place == "bottom":
+            self.center_x = random.randrange(round(self.df.left + self.indent), round(self.df.right - self.indent))
+            self.center_y = self.df.bottom - self.indent
+        elif self.spawn_place == "left":
+            self.center_x = self.df.left - self.indent
+            self.center_y = random.randrange(round(self.df.bottom + self.indent), round(self.df.top - self.indent))
+        else:
+            self.center_x = self.df.right + self.indent
+            self.center_y = random.randrange(self.df.bottom + self.indent, self.df.top - self.indent)
+
+        self.spawn_direction_dict = {
+            "top": (0, -1),
+            "bottom": (0, 1),
+            "left": (1, 0),
+            "right": (-1, 0)
+        }
+        self.direction = self.spawn_direction_dict[spawn_place]
+        self.speed = 100
+
         self.texture = EasySprite.load_texture("Defender_Battle/Static/Textures/bullet_pixel.png", 3)
         self.scale = 1
 
-        self.speed = 100
-
     def update(self, delta_time):
-        if not self.df.is_wave_active:
-            self.speed = 400
-            self.move_forward(delta_time)
-        else:
-            self.check_for_collision()
-
-            right = self.board.indent_x + self.board.width * self.board.cell_size
-            left = self.board.indent_x
-
-            if self.center_x > right or self.center_x < left:
-                self.move_forward(delta_time)
-            else:
-                self.move_to_player(delta_time)
+        self.move_to_player(delta_time)
+        # if not self.df.is_wave_active:
+        #     self.speed = 400
+        #     self.move_forward(delta_time)
+        # else:
+        #     self.move_to_player(delta_time)
+        #     self.check_for_collision()
 
     def check_for_collision(self):
         if arcade.check_for_collision(self, self.player):
             if not self.player.is_shield:
                 # self.background.start_pulse()
                 damage_sound = arcade.load_sound("Defender_Battle/Static/Sounds/get_damage.wav")
-                arcade.play_sound(damage_sound, 3)
+                arcade.play_sound(damage_sound, 0)
                 self.df.health_lose += self.health_lose_boost
             else:
                 hit_sound = arcade.load_sound("Defender_Battle/Static/Sounds/hit_bullet_from_shield.wav")
-                arcade.play_sound(hit_sound, 1)
+                arcade.play_sound(hit_sound, 0)
             self.remove_from_sprite_lists()
 
     def move_forward(self, delta_time):
-        self.center_x -= self.speed * delta_time
-        if self.center_x < self.df.x - 50:
+        dx, dy = self.direction
+        self.center_x += self.speed * dx * delta_time
+        self.center_y += self.speed * dy * delta_time
+
+        is_outside = False
+        if self.spawn_place == "top":
+            is_outside = self.center_y < self.df.bottom - self.indent
+        elif self.spawn_place == "bottom":
+            is_outside = self.center_y > self.df.top + self.indent
+        elif self.spawn_place == "left":
+            is_outside = self.center_x > self.df.right + self.indent
+        else:
+            is_outside = self.center_x < self.df.left - self.indent
+
+        if is_outside:
             self.remove_from_sprite_lists()
+            print(self.spawn_place)
 
     def move_to_player(self, delta_time):
         plx = self.player.center_x
         ply = self.player.center_y
         rx = self.center_x - plx
         ry =  self.center_y - ply
-
         angle = math.atan2(ry, rx)
-        dx = self.speed * delta_time
-        dy = math.sin(angle) * self.speed * delta_time
-        self.center_x -= dx
-        self.center_y -= dy
+
+        dx, dy = self.direction
+
+        if self.spawn_place == "top" or self.spawn_place == "bottom":
+            chx = math.cos(angle) * self.speed * delta_time * -1
+            chy = self.speed * delta_time * dy
+        else:
+            chx = self.speed * delta_time * dx
+            chy = math.sin(angle) * self.speed * delta_time * -1
+
+        self.center_x += chx
+        self.center_y += chy
 
 
 # Спрайт ауры
@@ -655,7 +695,7 @@ class AuraPoint(arcade.Sprite):
                 if not self.is_moved:
                     if arcade.check_for_collision(self, self.df.player):
                         cristal_sound = arcade.load_sound("Defender_Battle/Static/Sounds/get_cristal.wav")
-                        arcade.play_sound(cristal_sound, 0.25)
+                        arcade.play_sound(cristal_sound, 0)
                         self.df.damage_attack += self.damage_attack_boost
                         self.is_moved = True
             else:

@@ -4,7 +4,7 @@ import arcade
 from Fight_Mechanic.main import setup_fight
 
 
-# Менеджер сцен для управления битвами, перемещением героев, диалогами и т.д.
+# Менеджер сцен для управления битвами, перемещением героев, диалог2ами и т.д.
 class SceneManager:
     def __init__(self, window):
         self.window = window
