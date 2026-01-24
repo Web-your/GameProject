@@ -2,6 +2,7 @@
 # Name: Иван и Макс, Date: 08.01.2026, WhatYouDo: добавили интерфейс
 
 import arcade
+import random
 
 # Импортируем функции для запуска мини-игр
 from Defender_Battle.main import setup_defender
@@ -27,30 +28,88 @@ MINI_WINDOW_HEIGHT = 650
 MINI_WINDOW_CENTER_X = 500
 MINI_WINDOW_CENTER_Y = 420
 
+TYPE_INDEX_DICT = {"menu": 0, "attack": 1, "defense": 2, "heal": 3}
+INDEX_TYPE_LIST = ["menu", "attack", "defense", "heal"]
 
+# API выбора
+# [{"hero_type": str (attack, defense, heal),
+# "action_type": str (main, support, item, mana),
+# "action_data": {"count": int, "support_hero": str, "attack_enemies": str, "item": class Item, "item_hero": str}}]
 
 # Динамические объекты
 # <-------------------------------------------------------------------------------------------------------------------
 
 # Функция для переключения на меню
 def menu_setup(scene_manager, *settings):
-    fight_box = scene_manager.fight_box
+    fight_box = scene_manager.fb
     fight_box.mini_window.frame.setup()
     fight_box.window.show_view(fight_box.menu_view)
 
 
 # Переключается меду сценами, окнами и мини-играми
+class PhaseManager:
+    def __init__(self, fb):
+        self.fb = fb
+        self.mini_games_list = [3, 1, 3, 2]
+        self.support_list = []
+        self.curr_support = None
+        self.curr_enemies = None
+        self.used_items = []
+        self.game_que = ["attack", "heal", "defense"]
+
+    def data_handler(self, data):
+        for i, hero in enumerate(data):
+            h_type, a_type, a_data = hero.values()
+
+            if a_type == "mana":
+                self.fb.count_mana += a_data["count"]
+
+            elif a_type == "main":
+                self.mini_games_list.append(TYPE_INDEX_DICT[h_type])
+                if h_type == "attack":
+                    self.curr_enemies = a_data["attack_enemies"]
+
+            elif a_type == "support":
+                self.support_list.append(TYPE_INDEX_DICT[a_data["support_hero"]])
+
+            elif a_type == "item":
+                self.used_items.append([a_data["item"], a_data["item_hero"]])
+
+        self.fb.scene_manager.next_scene()
+
+    def update(self):
+        # all_heros_update()
+        # enemies_update()
+        # items_update()
+        # mana_update
+
+        self.curr_support = None
+        self.curr_support = None
+        self.mini_games_list = [3, 1, 3, 2]
+        self.support_list = []
+        self.used_items = []
+
+    def temporary_updates(self):
+        next_scene_index = self.fb.scene_manager.curr_scene_index
+        hero = self.fb.hero_list.type_hero_dict[INDEX_TYPE_LIST[next_scene_index]]
+
+        if next_scene_index in self.support_list:
+            self.curr_support = INDEX_TYPE_LIST[next_scene_index]
+
+
 class SceneManager:
     def __init__(self, fight_box):
-        self.fight_box = fight_box
+        self.fb = fight_box
         self.window = fight_box.window
 
         # Добавляем сцены в очередь: каждая сцена - функция, которая запускает механику мини-битвы
         self.scenes = [menu_setup, setup_attack, setup_defender, setup_heal]
         self.curr_scene_index = 0 # Индекс текущей сцены в очереди
+        self.next_scene_index = 0
 
     def setup(self):
         self.curr_scene_index = 0
+        self.next_scene_index = 0
         self.next_scene()
 
     # Запускаем следующую сцену
@@ -61,13 +120,21 @@ class SceneManager:
 
     # Меняем индекс текущей сцены
     def change_curr_scene_index(self):
-        # Возвращаемся на меню после мини-боя
-        if self.curr_scene_index != 0:
-            self.curr_scene_index = 0
+        if self.curr_scene_index == 0:
+            self.fb.phase_manager.update()
+        else:
+            phase_scenes = self.fb.phase_manager.mini_games_list
+            self.next_scene_index += 1
+            if self.next_scene_index >= len(phase_scenes):
+                self.next_scene_index = 0
+                self.curr_scene_index = 0
+            else:
+                self.curr_scene_index = phase_scenes[self.next_scene_index]
+                self.fb.phase_manager.temporary_updates()
 
     # Выходим из боёвки
     def back(self):
-        stop_fight(self.fight_box)
+        stop_fight(self.fb)
 
 
 # Окно отрисовки меню
@@ -460,10 +527,20 @@ class Interface:
                     return
 
 
+class Item:
+    ...
+
+
+class Enemies:
+    def __init__(self, fb):
+        self.fb = fb
+        self.health = 1
+
+
 # Герой
 class Hero:
-    def __init__(self, type):
-        self.type = type
+    def __init__(self, h_type):
+        self.type = h_type
         self.health = 1
 
 
@@ -479,6 +556,9 @@ class HeroList:
     
     def get_hero(self, h_type):
         return self.type_hero_dict[h_type]
+
+    def get_hero_list(self):
+        return list(self.type_hero_dict.values())
 
 
 
@@ -500,6 +580,8 @@ class FightBox:
         self.center_x = self.window.center_x
         self.center_y = self.window.center_y
 
+        self.count_mana = 0
+
         # Создание системных героев
         self.hero_list = HeroList(self)
         self.attack_hero = self.hero_list.get_hero("attack")
@@ -509,9 +591,29 @@ class FightBox:
         self.interface = Interface(self)  # Интерфейс
 
         self.scene_manager = SceneManager(self)  # Собственный менеджер сцен
+        self.phase_manager = PhaseManager(self) # Менеджер фаз
         self.menu_view = MenuView(self)  # Окно отрисовки меню
 
         self.scene_manager.setup()
+
+    def lose_health(self, health_lose):
+        scene_index = self.scene_manager.curr_scene_index
+        if scene_index == 2:
+            hero = random.choice(self.hero_list.get_hero_list())
+            if self.phase_manager.curr_support == 2:
+                health_lose *= 3/4
+        else:
+            hero = self.hero_list.get_hero(INDEX_TYPE_LIST[scene_index])
+
+        hero.health -= health_lose
+
+    def attack_enemies(self, damage_attack):
+        scene_index = self.scene_manager.curr_scene_index
+        if self.phase_manager.curr_support == 1:
+            damage_attack *= 5/4
+
+    def heal(self, health_heal):
+        ...
 
 
 # Функция для запуска общей битвы

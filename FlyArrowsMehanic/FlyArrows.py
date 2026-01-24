@@ -9,7 +9,7 @@ class AttackView(arcade.View):
     def __init__(self, main_scene_manager):
         super().__init__()
         self.main_scene_manager = main_scene_manager
-        self.fight_box = main_scene_manager.fight_box
+        self.fight_box = main_scene_manager.fb
 
         self.mg_box = self.fight_box.mg_box
         self.mini_window = self.mg_box.mini_window

@@ -728,7 +728,7 @@ class DefenderBox:
         # Обязательно получаем основное окно при создании, чтобы переключаться между сценами
         self.window = main_scene_manager.window
 
-        self.fight_box = main_scene_manager.fight_box
+        self.fight_box = main_scene_manager.fb
 
         # Дополнительные графические объекты
         self.mg_box = self.fight_box.mg_box

@@ -11,7 +11,7 @@ HERO_TYPE_ICON_PATH_DICT = {
 
 class MiniWindow:
     def __init__(self, mg_box):
-        window = mg_box.fight_box.window
+        window = mg_box.fb.window
 
         # Параметры окна
         self.width = 10 * 70
@@ -335,7 +335,7 @@ class Persons:
 
 class MiniGameDopBox:
     def __init__(self, fight_box):
-        self.fight_box = fight_box
+        self.fb = fight_box
         self.window = fight_box.window
 
         self.interface = MiniGameInterface(self)

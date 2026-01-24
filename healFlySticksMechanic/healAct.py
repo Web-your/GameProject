@@ -142,7 +142,7 @@ class HealTestView(arcade.View):
     def __init__(self, main_scene_manager, target_hero_index=0, parent_view=None):
         super().__init__()
         self.main_scene_manager = main_scene_manager
-        self.f_box = main_scene_manager.fight_box
+        self.f_box = main_scene_manager.fb
         self.mg_box = self.f_box.mg_box
         self.mini_window = self.mg_box.mini_window
 
