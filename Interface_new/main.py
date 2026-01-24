@@ -1,4 +1,4 @@
-""" Name: Максим | Date: 24.01.2026 | WhatYouDo: Обновил интерфейс: добавил текстуру шкале ауры и исправил баг мульти-выбора """
+""" Name: Максим | Date: 25.01.2026 | WhatYouDo: Переработал выбор предметов """
 from PIL import Image
 import arcade
 import io
@@ -17,6 +17,7 @@ ELEMENT_MARGIN = 10
 STATE_NORMAL = "normal"  # Обычный режим
 STATE_SELECTION = "selection"  # Режим выбора целей/предметов
 STATE_ALL_SELECTED = "all_selected"  # Все зоны выбраны
+STATE_ZONE_SELECTION = "zone_selection"  # Режим выбора зоны для предмета
 
 """Класс Юры"""
 
@@ -45,10 +46,8 @@ class EasySprite:
         texture = arcade.load_texture(img_bytes)
         return texture
 
-
+"""Основной класс интерфейса"""
 class InterfaceView(arcade.View):
-    """Основной класс интерфейса"""
-
     def __init__(self):
         super().__init__()
 
@@ -113,6 +112,20 @@ class InterfaceView(arcade.View):
 
         # Подокно для предметов
         self.item_subwindow = None
+
+        # Для режима выбора зоны предмета
+        self.selected_item_for_zone = None  # Выбранный предмет для применения к зоне
+        self.temp_selected_item = None  # Временное хранение выбранного предмета
+        self.temp_selected_item_index = None  # Временное хранение индекса выбранного предмета
+        self.temp_selected_column = None  # Временное хранение колонки выбранного предмета
+        self.original_zone_index = None  # Сохраняем оригинальную зону, в которой был начат выбор
+
+        # Шрифт
+        try:
+            self.custom_font = arcade.load_font("web_ibm_mda.ttf")
+        except:
+            self.custom_font = None
+            print("Не удалось загрузить шрифт web_ibm_mda.ttf, используется стандартный")
 
         # Создание интерфейса
         self.create_interface()
@@ -373,6 +386,38 @@ class InterfaceView(arcade.View):
                 }
                 break
 
+    """Перемещает выбор зон (для режима выбора зоны предмета)"""
+
+    def move_zone_selection(self, direction):
+        if direction == 'left':
+            if self.selected_button_zone > 0:
+                self.selected_button_zone -= 1
+        elif direction == 'right':
+            if self.selected_button_zone < 2:
+                self.selected_button_zone += 1
+        elif direction == 'up':
+            if self.selected_button_zone > 0:
+                self.selected_button_zone -= 1
+        elif direction == 'down':
+            if self.selected_button_zone < 2:
+                self.selected_button_zone += 1
+
+        # Обновляем индикатор зоны (без привязки к кнопке)
+        zone = None
+        for z in self.zones_list:
+            if z.zone_index == self.selected_button_zone:
+                zone = z
+                break
+
+        if zone:
+            self.button_indicator = {
+                'x': zone.center_x,
+                'y': zone.center_y,
+                'width': zone.width,
+                'height': zone.height,
+                'zone_index': zone.zone_index
+            }
+
     """Перемещает выбор кнопок в обычном режиме"""
 
     def move_button_selection(self, direction):
@@ -454,6 +499,7 @@ class InterfaceView(arcade.View):
 
         self.current_selection_type = selection_type
         self.active_zone_index = zone_index
+        self.original_zone_index = zone_index  # Сохраняем оригинальную зону
 
         self.selection_buttons_list.clear()
         self.item_subwindow = None
@@ -615,6 +661,11 @@ class InterfaceView(arcade.View):
         self.active_zone_index = None
         self.item_subwindow = None
         self.selection_buttons_list.clear()
+        self.selected_item_for_zone = None
+        self.temp_selected_item = None
+        self.temp_selected_item_index = None
+        self.temp_selected_column = None
+        self.original_zone_index = None
         print("Текущий выбор сброшен.")
 
     """Перемещает выбор в окне выбора"""
@@ -661,43 +712,124 @@ class InterfaceView(arcade.View):
 
         selected_item = self.selection_columns[self.selected_column][self.selected_item_index]
 
-        for item in self.selection_items:
-            item['selected'] = False
+        # Если это выбор предмета
+        if self.current_selection_type == 'itemIcon':
+            # Сохраняем выбранный предмет и его параметры
+            self.selected_item_for_zone = selected_item['text']
+            self.temp_selected_item = selected_item
+            self.temp_selected_item_index = self.selected_item_index
+            self.temp_selected_column = self.selected_column
 
-        selected_item['selected'] = True
+            # Обводим выбранный предмет оранжевым
+            for item in self.selection_items:
+                item['selected'] = False
+            selected_item['selected'] = True
+
+            # Переходим в режим выбора зоны
+            self.ui_state = STATE_ZONE_SELECTION
+            print(f"Выбран предмет: {selected_item['text']}. Теперь выберите зону для применения.")
+
+            # Сбрасываем выбор зоны (начинаем с первой зоны)
+            self.selected_button_zone = 0
+            self.move_zone_selection('')  # Инициализируем индикатор зоны
+
+        else:
+            # Для других типов выбора (атака, защита, лечение) - стандартная логика
+            for item in self.selection_items:
+                item['selected'] = False
+
+            selected_item['selected'] = True
+
+            # Очищаем предыдущий выбор в этой зоне, если он был
+            if self.active_zone_index in self.confirmed_selections:
+                print(f"Перезапись выбора в зоне {self.active_zone_index + 1}")
+                # Сбрасываем подтверждённый статус для всех кнопок в этой зоне
+                for button in self.buttons_list:
+                    if button.zone_index == self.active_zone_index:
+                        button.is_confirmed = False
+
+            self.confirmed_selections[self.active_zone_index] = {
+                'type': self.current_selection_type,
+                'item': selected_item['text']
+            }
+
+            if self.active_zone_index not in self.selected_zones:
+                self.selected_zones.append(self.active_zone_index)
+                self.selected_zones.sort()
+
+            # Устанавливаем подтверждённый статус только для выбранной кнопки в зоне
+            for button in self.buttons_list:
+                if (button.zone_index == self.active_zone_index and
+                        button.button_type == self.current_selection_type):
+                    button.is_confirmed = True
+                    self.selected_buttons[self.active_zone_index] = {
+                        'zone_index': self.active_zone_index,
+                        'button_index': button.button_index,
+                        'button_type': button.button_type
+                    }
+                    break
+
+            print(
+                f"Выбрано для зоны {self.active_zone_index + 1}: {selected_item['text']} (тип: {self.current_selection_type})")
+
+            if len(self.selected_zones) == 3:
+                print("Все зоны выбраны! Переход в режим ожидания...")
+                self.ui_state = STATE_ALL_SELECTED
+                self.selected_button_zone = 0
+                self.selected_button_index = 0
+                self.update_button_indicator()
+            else:
+                self.reset_selection()
+                self.move_to_next_zone()
+
+    """Подтверждает выбор зоны для предмета"""
+
+    def confirm_zone_selection_for_item(self):
+        if not self.selected_item_for_zone:
+            return
+
+        # Используем оригинальную зону, в которой был начат выбор, а не выбранную зону
+        zone_index = self.original_zone_index
 
         # Очищаем предыдущий выбор в этой зоне, если он был
-        if self.active_zone_index in self.confirmed_selections:
-            print(f"Перезапись выбора в зоне {self.active_zone_index + 1}")
+        if zone_index in self.confirmed_selections:
+            print(f"Перезапись выбора в зоне {zone_index + 1}")
             # Сбрасываем подтверждённый статус для всех кнопок в этой зоне
             for button in self.buttons_list:
-                if button.zone_index == self.active_zone_index:
+                if button.zone_index == zone_index:
                     button.is_confirmed = False
 
-        self.confirmed_selections[self.active_zone_index] = {
-            'type': self.current_selection_type,
-            'item': selected_item['text']
+        self.confirmed_selections[zone_index] = {
+            'type': 'itemIcon',
+            'item': self.selected_item_for_zone
         }
 
-        if self.active_zone_index not in self.selected_zones:
-            self.selected_zones.append(self.active_zone_index)
+        if zone_index not in self.selected_zones:
+            self.selected_zones.append(zone_index)
             self.selected_zones.sort()
 
-        # Устанавливаем подтверждённый статус только для выбранной кнопки в зоне
+        # Устанавливаем подтверждённый статус только для кнопки предмета в зоне
         for button in self.buttons_list:
-            if (button.zone_index == self.active_zone_index and
-                    button.button_type == self.current_selection_type):
+            if (button.zone_index == zone_index and
+                    button.button_type == 'itemIcon'):
                 button.is_confirmed = True
-                self.selected_buttons[self.active_zone_index] = {
-                    'zone_index': self.active_zone_index,
+                self.selected_buttons[zone_index] = {
+                    'zone_index': zone_index,
                     'button_index': button.button_index,
                     'button_type': button.button_type
                 }
                 break
 
-        print(
-            f"Выбрано для зоны {self.active_zone_index + 1}: {selected_item['text']} (тип: {self.current_selection_type})")
+        print(f"Предмет '{self.selected_item_for_zone}' применён к зоне {zone_index + 1}")
 
+        # Сбрасываем временные данные
+        self.selected_item_for_zone = None
+        self.temp_selected_item = None
+        self.temp_selected_item_index = None
+        self.temp_selected_column = None
+        self.original_zone_index = None
+
+        # Проверяем, все ли зоны выбраны
         if len(self.selected_zones) == 3:
             print("Все зоны выбраны! Переход в режим ожидания...")
             self.ui_state = STATE_ALL_SELECTED
@@ -705,7 +837,18 @@ class InterfaceView(arcade.View):
             self.selected_button_index = 0
             self.update_button_indicator()
         else:
-            self.reset_selection()
+            # Возвращаемся в нормальный режим
+            self.ui_state = STATE_NORMAL
+            self.selection_zone = None
+            self.selection_items = []
+            self.selection_columns = []
+            self.selection_indicator = None
+            self.current_selection_type = None
+            self.active_zone_index = None
+            self.item_subwindow = None
+            self.selection_buttons_list.clear()
+
+            # Переходим к следующей зоне
             self.move_to_next_zone()
 
     """Мгновенный выбор для кнопки ауры (без окна выбора)"""
@@ -758,13 +901,13 @@ class InterfaceView(arcade.View):
             self.selected_button_index = 0
             self.update_button_indicator()
 
+    """Обновляет текстуру кнопки при наведении"""
     def update_button_texture(self, button, is_hovered):
-        """Обновляет текстуру кнопки при наведении"""
         if is_hovered != button.is_hovered:
             button.is_hovered = is_hovered
 
+    """Добавляет единицу ауры"""
     def add_aura(self):
-        """Добавляет единицу ауры"""
         self.aura += 1
         if self.aura > self.max_aura:
             self.aura = 0
@@ -774,14 +917,14 @@ class InterfaceView(arcade.View):
 
     def draw_aura_counter_in_panel(self, panel_x, panel_y):
         if self.aura_bar_texture:
-            # Если текстура загружена, рисуем только её
+            # Подвинули текстуру шкалы Ауры влево и вверх
+            aura_start_x = panel_x - self.small_panel_width / 2 + 10
+            aura_y = panel_y + 10
+            start_x = aura_start_x + 5
+
             segment_width = 8
             segment_height = 25
             segment_spacing = 3
-
-            aura_start_x = panel_x - self.small_panel_width / 2 + 25
-            aura_y = panel_y
-            start_x = aura_start_x + 20
 
             total_bar_width = (self.max_aura * (segment_width + segment_spacing) - segment_spacing) * 2
             bar_left = start_x - segment_width
@@ -973,34 +1116,55 @@ class InterfaceView(arcade.View):
         self.selection_buttons_list.draw()
 
         for item in self.selection_items:
-            highlight_rect = arcade.LRBT(
-                left=item['x'] - item['width'] / 2 - 1,
-                right=item['x'] + item['width'] / 2 + 1,
-                bottom=item['y'] - item['height'] / 2 - 1,
-                top=item['y'] + item['height'] / 2 + 1
-            )
-            arcade.draw_rect_outline(highlight_rect, arcade.color.WHITE, 1)
+            # Только для режима выбора предметов (STATE_SELECTION) и если предмет не выбран, рисуем белую обводку
+            if self.ui_state == STATE_SELECTION and not item['selected']:
+                highlight_rect = arcade.LRBT(
+                    left=item['x'] - item['width'] / 2 - 1,
+                    right=item['x'] + item['width'] / 2 + 1,
+                    bottom=item['y'] - item['height'] / 2 - 1,
+                    top=item['y'] + item['height'] / 2 + 1
+                )
+                arcade.draw_rect_outline(highlight_rect, arcade.color.WHITE, 1)
 
-            arcade.draw_text(
-                item['text'],
-                item['x'],
-                item['y'],
-                arcade.color.WHITE,
-                12,
-                anchor_x="center",
-                anchor_y="center"
-            )
+            # Используем кастомный шрифт для текста кнопок выбора
+            if self.custom_font:
+                arcade.draw_text(
+                    item['text'],
+                    item['x'],
+                    item['y'],
+                    arcade.color.WHITE,
+                    12,
+                    anchor_x="center",
+                    anchor_y="center",
+                    font_name=self.custom_font
+                )
+            else:
+                arcade.draw_text(
+                    item['text'],
+                    item['x'],
+                    item['y'],
+                    arcade.color.WHITE,
+                    12,
+                    anchor_x="center",
+                    anchor_y="center"
+                )
 
             if item['selected']:
+                # Для предметов - оранжевая обводка, для остального - зелёная
+                if self.current_selection_type == 'itemIcon':
+                    selected_color = arcade.color.ORANGE
+                else:
+                    selected_color = arcade.color.DARK_GREEN
+
                 selected_rect = arcade.LRBT(
                     left=item['x'] - item['width'] / 2 - 3,
                     right=item['x'] + item['width'] / 2 + 3,
                     bottom=item['y'] - item['height'] / 2 - 3,
                     top=item['y'] + item['height'] / 2 + 3
                 )
-                arcade.draw_rect_outline(selected_rect, arcade.color.DARK_GREEN, 3)
+                arcade.draw_rect_outline(selected_rect, selected_color, 3)
 
-        if self.selection_indicator:
+        if self.selection_indicator and self.ui_state == STATE_SELECTION:
             indicator_rect = arcade.LRBT(
                 left=self.selection_indicator['x'] - self.selection_indicator['width'] / 2 - 2,
                 right=self.selection_indicator['x'] + self.selection_indicator['width'] / 2 + 2,
@@ -1081,8 +1245,12 @@ class InterfaceView(arcade.View):
 
             if zone.zone_index in self.selected_zones:
                 arcade.draw_rect_outline(zone_rect, arcade.color.RED, 3)  # Выбранная зона
-            elif self.button_indicator and zone.zone_index == self.button_indicator['zone_index']:
-                arcade.draw_rect_outline(zone_rect, arcade.color.YELLOW, 3)  # Активная зона
+            elif self.ui_state == STATE_ZONE_SELECTION and zone.zone_index == self.selected_button_zone:
+                # В режиме выбора зоны для предмета - оранжевая обводка
+                arcade.draw_rect_outline(zone_rect, arcade.color.ORANGE, 3)  # Активная зона для предмета
+            elif self.button_indicator and zone.zone_index == self.button_indicator[
+                'zone_index'] and self.ui_state == STATE_NORMAL:
+                arcade.draw_rect_outline(zone_rect, arcade.color.YELLOW, 3)  # Активная зона в обычном режиме
             else:
                 arcade.draw_rect_outline(zone_rect, arcade.color.LIGHT_GRAY, 1)  # Обычная зона
 
@@ -1113,6 +1281,17 @@ class InterfaceView(arcade.View):
             if button.is_confirmed:
                 arcade.draw_rect_outline(button_rect, arcade.color.RED, 3)
 
+        # Индикатор зоны в режиме выбора зоны для предмета
+        if self.ui_state == STATE_ZONE_SELECTION and self.button_indicator:
+            indicator_rect = arcade.LRBT(
+                left=self.button_indicator['x'] - self.button_indicator['width'] / 2 - 2,
+                right=self.button_indicator['x'] + self.button_indicator['width'] / 2 + 2,
+                bottom=self.button_indicator['y'] - self.button_indicator['height'] / 2 - 2,
+                top=self.button_indicator['y'] + self.button_indicator['height'] / 2 + 2
+            )
+            arcade.draw_rect_outline(indicator_rect, arcade.color.ORANGE, 3)
+
+        # Индикатор кнопки только в обычном режиме
         if self.button_indicator and self.ui_state == STATE_NORMAL:
             indicator_rect = arcade.LRBT(
                 left=self.button_indicator['x'] - self.button_indicator['width'] / 2 - 2,
@@ -1122,7 +1301,7 @@ class InterfaceView(arcade.View):
             )
             arcade.draw_rect_outline(indicator_rect, arcade.color.YELLOW, 3)
 
-        if self.ui_state == STATE_SELECTION:
+        if self.ui_state == STATE_SELECTION or (self.ui_state == STATE_ZONE_SELECTION and self.selection_zone):
             self.draw_selection_zone()
 
         # Отрисовка счётчика ауры
@@ -1156,6 +1335,29 @@ class InterfaceView(arcade.View):
                     anchor_x="center",
                     anchor_y="center"
                 )
+
+        # Отрисовка инструкции в режиме выбора зоны для предмета
+        if self.ui_state == STATE_ZONE_SELECTION and self.selected_item_for_zone:
+            instruction_y = self.main_panel_y - self.main_panel_height / 2 - 30
+            arcade.draw_text(
+                f"Выберите зону для предмета: {self.selected_item_for_zone}",
+                SCREEN_WIDTH // 2,
+                instruction_y,
+                arcade.color.YELLOW,
+                16,
+                anchor_x="center",
+                anchor_y="center",
+                bold=True
+            )
+            arcade.draw_text(
+                "Нажмите ENTER для подтверждения, BACKSPACE для возврата к выбору предмета",
+                SCREEN_WIDTH // 2,
+                instruction_y - 25,
+                arcade.color.LIGHT_GRAY,
+                12,
+                anchor_x="center",
+                anchor_y="center"
+            )
 
     def on_mouse_motion(self, x, y, dx, dy):
         pass
@@ -1216,6 +1418,35 @@ class InterfaceView(arcade.View):
                 self.confirm_selection()
             elif key == arcade.key.BACKSPACE:
                 self.reset_selection()
+
+        elif self.ui_state == STATE_ZONE_SELECTION:
+            if key == arcade.key.LEFT:
+                self.move_zone_selection('left')
+            elif key == arcade.key.RIGHT:
+                self.move_zone_selection('right')
+            elif key == arcade.key.UP:
+                self.move_zone_selection('up')
+            elif key == arcade.key.DOWN:
+                self.move_zone_selection('down')
+            elif key == arcade.key.ENTER or key == arcade.key.RETURN:
+                self.confirm_zone_selection_for_item()
+            elif key == arcade.key.BACKSPACE:
+                # Возвращаемся к выбору предмета, очищаем оранжевую обводку
+                self.ui_state = STATE_SELECTION
+                if self.temp_selected_item is not None:
+                    # Снимаем оранжевую обводку с предмета
+                    for item in self.selection_items:
+                        item['selected'] = False
+
+                    self.selected_column = self.temp_selected_column
+                    self.selected_item_index = self.temp_selected_item_index
+                    self.selection_indicator = {
+                        'x': self.temp_selected_item['x'],
+                        'y': self.temp_selected_item['y'],
+                        'width': self.temp_selected_item['width'],
+                        'height': self.temp_selected_item['height']
+                    }
+                print("Возврат к выбору предмета")
 
 
 def main():
