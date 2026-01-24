@@ -504,7 +504,7 @@ class FightBox:
         self.hero_list = HeroList(self)
         self.attack_hero = self.hero_list.get_hero("attack")
         self.defense_hero = self.hero_list.get_hero("defense")
-        self.heal_hero = self.hero_list.get_hero("heal_hero")
+        self.heal_hero = self.hero_list.get_hero("heal")
 
         self.interface = Interface(self)  # Интерфейс
 

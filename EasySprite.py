@@ -1,6 +1,5 @@
 import arcade
 from PIL import Image
-from arcade.hitbox import HitBoxAlgorithm
 
 
 def load_image(image_path: str, scale: float = 1):
