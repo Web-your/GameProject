@@ -1,4 +1,4 @@
-""" Name: Максим | Date: 19.01.2026 | WhatYouDo: Исправил интерфейс """
+""" Name: Максим | Date: 23.01.2026 | WhatYouDo: Обновил выбор: убрал фон у кнопок ывбора, добавил окошко под описание предмета """
 from PIL import Image
 import arcade
 import io
@@ -71,6 +71,7 @@ class InterfaceView(arcade.View):
         self.buttons_list = arcade.SpriteList()  # Список кнопок
         self.zones_list = arcade.SpriteList()  # Список зон
         self.icons_list = arcade.SpriteList()  # Список иконок зон
+        self.selection_buttons_list = arcade.SpriteList()  # Список кнопок выбора
 
         # Переменные для режима выбора
         self.selection_zone = None  # Зона выбора (окно с целями/предметами)
@@ -103,7 +104,12 @@ class InterfaceView(arcade.View):
         self.textures = {}  # Загруженные текстуры
         self.button_sprites = {}  # Спрайты кнопок
         self.zone_texture = None  # Текстура зоны
+        self.selection_button_texture = None  # Текстура для кнопок выбора
+        self.item_subwindow_texture = None  # Текстура для подокна предметов
         self.load_textures()
+
+        # Подокно для предметов
+        self.item_subwindow = None
 
         # Создание интерфейса
         self.create_interface()
@@ -117,6 +123,20 @@ class InterfaceView(arcade.View):
         except Exception as e:
             print(f"Ошибка при загрузке текстуры Field.png: {e}")
             self.zone_texture = None
+
+        # Загрузка текстуры для кнопок выбора (ЗАМЕНА: Field.png -> SelectionLine.png)
+        try:
+            self.selection_button_texture = EasySprite.upscale_image("SelectionLine.png", 4)
+        except Exception as e:
+            print(f"Ошибка при загрузке текстуры SelectionLine.png для кнопок выбора: {e}")
+            self.selection_button_texture = None
+
+        # Загрузка текстуры для подокна предметов
+        try:
+            self.item_subwindow_texture = EasySprite.upscale_image("Field.png", 2)
+        except Exception as e:
+            print(f"Ошибка при загрузке текстуры Field.png для подокна предметов: {e}")
+            self.item_subwindow_texture = None
 
         # Файлы текстур для кнопок
         texture_files = {
@@ -247,6 +267,33 @@ class InterfaceView(arcade.View):
 
         sprite.sprite_type = "zone"
         sprite.zone_index = zone_index
+        return sprite
+
+    """Создание спрайта кнопки выбора с текстурой SelectionLine.png"""
+
+    def create_selection_button_sprite(self, x, y, width, height, text):
+        # Создаем спрайт с текстурой SelectionLine.png (ЗАМЕНА)
+        if self.selection_button_texture:
+            sprite = arcade.Sprite()
+            sprite.texture = self.selection_button_texture
+            sprite.center_x = x
+            sprite.center_y = y
+
+            # Масштабируем под нужный размер
+            scale_x = width / sprite.width
+            scale_y = height / sprite.height
+            sprite.scale = min(scale_x, scale_y)
+
+            sprite.width = width
+            sprite.height = height
+        else:
+            # Если текстура не загружена, создаем серую кнопку
+            sprite = arcade.SpriteSolidColor(width, height, arcade.color.DARK_GRAY)
+            sprite.center_x = x
+            sprite.center_y = y
+
+        # Сохраняем текст для отрисовки
+        sprite.button_text = text
         return sprite
 
     """Создание всех элементов интерфейса: зон, иконок и кнопок"""
@@ -392,7 +439,7 @@ class InterfaceView(arcade.View):
 
         # Обработка разных типов кнопок
         if selected_button.button_type == 'auroDopIcon':
-            # Кнопка ауры - мгновенный выбор
+            # Кнопка ауры
             self.immediate_auro_dop_selection(selected_button.zone_index)
             self.move_to_next_zone()
         else:
@@ -418,23 +465,31 @@ class InterfaceView(arcade.View):
         self.current_selection_type = selection_type
         self.active_zone_index = zone_index
 
+        # Очищаем список кнопок выбора
+        self.selection_buttons_list.clear()
+        self.item_subwindow = None  # Сбрасываем подокно
+
         # Настройки для разных типов выбора
         if selection_type == 'actionIcon_1':
             title = "Выбор цели для атаки"
             item_prefix = "Враг"
             column2_items = ["Персонаж 1", "Персонаж 2"]
+            show_subwindow = False
         elif selection_type == 'actionIcon_2':
             title = "Выбор цели для защиты"
             item_prefix = "Союзник"
             column2_items = ["Персонаж 1", "Персонаж 2"]
+            show_subwindow = False
         elif selection_type == 'actionIcon_3':
             title = "Выбор цели для лечения"
             item_prefix = "Пациент"
             column2_items = ["Персонаж 1", "Персонаж 2"]
+            show_subwindow = False
         elif selection_type == 'itemIcon':
-            title = None  # Убрали заголовок для выбора предметов
+            title = None
             item_prefix = "Предмет"
             column2_items = ["Предмет 1", "Предмет 2", "Предмет 3"]
+            show_subwindow = True  # Показываем подокно для предметов
 
         # Параметры окна выбора
         selection_height = 140
@@ -446,8 +501,21 @@ class InterfaceView(arcade.View):
             'width': SCREEN_WIDTH - 40,
             'height': selection_height,
             'color': arcade.color.BLACK,
-            'title': title
+            'title': title,
+            'show_subwindow': show_subwindow
         }
+
+        # Описание предметов
+        if show_subwindow:
+            self.item_subwindow = {
+                'x': SCREEN_WIDTH - 260,
+                'y': selection_y,
+                'width': 460,
+                'height': selection_height - 10,
+                'texture': self.item_subwindow_texture,
+                'title': "Описание",
+                'description': "TBA"
+            }
 
         self.selection_columns = []
         self.selection_items = []
@@ -474,11 +542,11 @@ class InterfaceView(arcade.View):
             # Определение количества элементов в колонке
             if selection_type in ['actionIcon_1', 'actionIcon_2', 'actionIcon_3']:
                 if col == 0:
-                    current_items_count = 3  # Первая колонка: 3 элемента
+                    current_items_count = 3
                 else:
-                    current_items_count = 2  # Вторая колонка: 2 элемента
+                    current_items_count = 2
             else:
-                current_items_count = 3  # Для предметов: 3 элемента в каждой колонке
+                current_items_count = 3
 
             # Создание элементов в колонке
             for row in range(current_items_count):
@@ -495,7 +563,19 @@ class InterfaceView(arcade.View):
                     item_num = col * 3 + row + 1
                     item_text = f"{item_prefix} {item_num}"
 
-                # Создание элемента
+                # Создание спрайта кнопки с текстурой SelectionLine.png
+                button_sprite = self.create_selection_button_sprite(
+                    column_x,
+                    item_y,
+                    item_width,
+                    item_height,
+                    item_text
+                )
+
+                # Добавляем спрайт в список
+                self.selection_buttons_list.append(button_sprite)
+
+                # Создание элемента с ссылкой на спрайт
                 item = {
                     'x': column_x,
                     'y': item_y,
@@ -505,7 +585,7 @@ class InterfaceView(arcade.View):
                     'column': col,
                     'row': row,
                     'selected': False,
-                    'item_num': row + 1 if col == 0 else row + 4
+                    'item_num': row + 1 if col == 0 else row + 4,
                 }
                 column_items.append(item)
                 self.selection_items.append(item)
@@ -559,6 +639,9 @@ class InterfaceView(arcade.View):
         self.selection_indicator = None
         self.current_selection_type = None
         self.active_zone_index = None
+        self.item_subwindow = None
+        # Очищаем список кнопок выбора
+        self.selection_buttons_list.clear()
         print("Текущий выбор сброшен.")
 
     """Перемещение выбора в окне выбора"""
@@ -719,7 +802,6 @@ class InterfaceView(arcade.View):
         aura_start_x = panel_x - self.small_panel_width / 2 + 25
         aura_y = panel_y
 
-        # Текст "AP"
         arcade.draw_text(
             "AP",
             aura_start_x - 10,
@@ -785,6 +867,64 @@ class InterfaceView(arcade.View):
 
         self.draw_aura_counter_in_panel(panel_x, panel_y)
 
+    """Отрисовка подокна для предметов"""
+
+    def draw_item_subwindow(self):
+        if not self.item_subwindow:
+            return
+
+        # Фон подокна
+        subwindow_rect = arcade.LRBT(
+            left=self.item_subwindow['x'] - self.item_subwindow['width'] / 2,
+            right=self.item_subwindow['x'] + self.item_subwindow['width'] / 2,
+            bottom=self.item_subwindow['y'] - self.item_subwindow['height'] / 2,
+            top=self.item_subwindow['y'] + self.item_subwindow['height'] / 2
+        )
+
+        # Если есть текстура, создаем спрайт
+        if self.item_subwindow['texture']:
+            # Рисуем текстуру
+            arcade.draw_texture_rect(
+                self.item_subwindow['texture'],
+                subwindow_rect
+            )
+        else:
+            # Или рисуем серый прямоугольник
+            arcade.draw_rect_filled(subwindow_rect, arcade.color.DARK_GRAY)
+
+        # Рамка подокна
+        arcade.draw_rect_outline(subwindow_rect, arcade.color.LIGHT_GRAY, 2)
+
+        # Заголовок подокна (в верхней части)
+        arcade.draw_text(
+            self.item_subwindow['title'],
+            self.item_subwindow['x'],
+            self.item_subwindow['y'] + self.item_subwindow['height'] // 2 - 15,
+            arcade.color.LIGHT_GRAY,
+            14,
+            anchor_x="center",
+            anchor_y="center",
+            bold=True
+        )
+
+        # Описание предмета
+        text_x = self.item_subwindow['x'] - self.item_subwindow['width'] / 2 + 10
+        text_y = self.item_subwindow['y']
+        text_width = self.item_subwindow['width'] - 20
+
+        # Рисуем текст с выравниванием по центру
+        arcade.draw_text(
+            self.item_subwindow['description'],
+            text_x,
+            text_y,
+            arcade.color.WHITE,
+            12,
+            anchor_x="left",
+            anchor_y="center",
+            align="center",
+            width=text_width
+        )
+
     """Отрисовка окна выбора целей/предметов"""
 
     def draw_selection_zone(self):
@@ -826,24 +966,21 @@ class InterfaceView(arcade.View):
                 arcade.color.GRAY, 2
             )
 
-        # Отрисовка элементов выбора
+        # Отрисовка кнопок выбора через SpriteList
+        self.selection_buttons_list.draw()
+
+        # Отрисовка текста поверх кнопок и выделений
         for item in self.selection_items:
-            item_rect = arcade.LRBT(
-                left=item['x'] - item['width'] / 2,
-                right=item['x'] + item['width'] / 2,
-                bottom=item['y'] - item['height'] / 2,
-                top=item['y'] + item['height'] / 2
+            # Тонкое белое выделение для всех кнопок
+            highlight_rect = arcade.LRBT(
+                left=item['x'] - item['width'] / 2 - 1,
+                right=item['x'] + item['width'] / 2 + 1,
+                bottom=item['y'] - item['height'] / 2 - 1,
+                top=item['y'] + item['height'] / 2 + 1
             )
+            arcade.draw_rect_outline(highlight_rect, arcade.color.WHITE, 1)
 
-            if item['selected']:
-                item_color = arcade.color.DARK_GREEN  # Выбранный элемент
-            else:
-                item_color = arcade.color.DARK_GRAY  # Невыбранный элемент
-
-            arcade.draw_rect_filled(item_rect, item_color)
-            arcade.draw_rect_outline(item_rect, arcade.color.LIGHT_GRAY, 1)
-
-            # Текст элемента
+            # Текст элемента поверх кнопки
             arcade.draw_text(
                 item['text'],
                 item['x'],
@@ -854,6 +991,16 @@ class InterfaceView(arcade.View):
                 anchor_y="center"
             )
 
+            # Рамка для выбранного элемента (толще)
+            if item['selected']:
+                selected_rect = arcade.LRBT(
+                    left=item['x'] - item['width'] / 2 - 3,
+                    right=item['x'] + item['width'] / 2 + 3,
+                    bottom=item['y'] - item['height'] / 2 - 3,
+                    top=item['y'] + item['height'] / 2 + 3
+                )
+                arcade.draw_rect_outline(selected_rect, arcade.color.DARK_GREEN, 3)
+
         # Индикатор текущего выбора (красная рамка)
         if self.selection_indicator:
             indicator_rect = arcade.LRBT(
@@ -863,6 +1010,10 @@ class InterfaceView(arcade.View):
                 top=self.selection_indicator['y'] + self.selection_indicator['height'] / 2 + 2
             )
             arcade.draw_rect_outline(indicator_rect, arcade.color.RED, 3)
+
+        # Отрисовка подокна для предметов (если нужно) - теперь увеличенное
+        if self.selection_zone.get('show_subwindow', False):
+            self.draw_item_subwindow()
 
     """Основной метод отрисовки интерфейса"""
 
