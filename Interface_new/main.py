@@ -1,7 +1,10 @@
-""" Name: Максим | Date: 25.01.2026 | WhatYouDo: Переработал выбор предметов """
+""" Name: Максим | Date: 25.01.2026 | WhatYouDo: Добавил шрифты """
 from PIL import Image
 import arcade
 import io
+import os
+import matplotlib.font_manager as fm
+import pyglet
 
 # Константы
 SCREEN_WIDTH = 960
@@ -46,7 +49,10 @@ class EasySprite:
         texture = arcade.load_texture(img_bytes)
         return texture
 
+
 """Основной класс интерфейса"""
+
+
 class InterfaceView(arcade.View):
     def __init__(self):
         super().__init__()
@@ -108,6 +114,15 @@ class InterfaceView(arcade.View):
         self.selection_button_texture = None  # Текстура кнопок выбора
         self.item_subwindow_texture = None  # Текстура подокна предметов
         self.aura_bar_texture = None  # Текстура шкалы ауры
+        self.aura_bar_point_texture = None  # Текстура точки шкалы ауры
+        self.aura_bar_point_sprite = None  # Спрайт точки шкалы ауры
+        self.aura_bar_point_list = arcade.SpriteList()  # Список для точки шкалы ауры
+
+        # Шрифт
+        self.font_name = None
+        self.load_font()
+
+        # Загрузка текстур после инициализации шрифта
         self.load_textures()
 
         # Подокно для предметов
@@ -119,17 +134,58 @@ class InterfaceView(arcade.View):
         self.temp_selected_item_index = None  # Временное хранение индекса выбранного предмета
         self.temp_selected_column = None  # Временное хранение колонки выбранного предмета
         self.original_zone_index = None  # Сохраняем оригинальную зону, в которой был начат выбор
-
-        # Шрифт
-        try:
-            self.custom_font = arcade.load_font("web_ibm_mda.ttf")
-        except:
-            self.custom_font = None
-            print("Не удалось загрузить шрифт web_ibm_mda.ttf, используется стандартный")
+        self.target_zone_index = None  # Зона, к которой будет применен предмет
 
         # Создание интерфейса
         self.create_interface()
         self.update_button_indicator()
+
+    def load_font(self):
+        """Загружает кастомный шрифт как в системе диалогов"""
+        font_filename = "web_ibm_mda.ttf"
+
+        # Способ 1: Пробуем тот же подход, что и в системе диалогов
+        try:
+            # Проверяем, существует ли файл
+            if os.path.exists(font_filename):
+                # Регистрируем шрифт в pyglet
+                pyglet.font.add_file(font_filename)
+
+                # Получаем имя шрифта через matplotlib.font_manager
+                font_prop = fm.FontProperties(fname=font_filename)
+                self.font_name = font_prop.get_name()
+                print(f"✓ Шрифт загружен! Имя: {self.font_name}")
+                return
+            else:
+                print(f"✗ Файл шрифта не найден в текущей директории: {font_filename}")
+        except Exception as e:
+            print(f"✗ Ошибка при загрузке шрифта: {e}")
+
+        # Способ 2: Пробуем найти файл в разных местах
+        font_paths = [
+            font_filename,
+            os.path.join(".", font_filename),
+            os.path.join("fonts", font_filename),
+        ]
+
+        for font_path in font_paths:
+            try:
+                if os.path.exists(font_path):
+                    # Регистрируем шрифт в pyglet
+                    pyglet.font.add_file(font_path)
+
+                    # Получаем имя шрифта через matplotlib.font_manager
+                    font_prop = fm.FontProperties(fname=font_path)
+                    self.font_name = font_prop.get_name()
+                    print(f"✓ Шрифт загружен из {font_path}! Имя: {self.font_name}")
+                    return
+            except Exception as e:
+                print(f"✗ Ошибка при загрузке шрифта из {font_path}: {e}")
+                continue
+
+        # Если ничего не помогло, используем стандартный шрифт
+        print("⚠ Шрифт web_ibm_mda.ttf не найден. Используется стандартный шрифт.")
+        self.font_name = "Arial"
 
     def load_textures(self):
         """Загружает все текстуры для интерфейса"""
@@ -157,6 +213,13 @@ class InterfaceView(arcade.View):
         except Exception as e:
             print(f"Ошибка при загрузке текстуры AuraBar.png: {e}")
             self.aura_bar_texture = None
+
+        try:
+            # Загружаем текстуру точки шкалы ауры с корректным масштабированием
+            self.aura_bar_point_texture = EasySprite.upscale_image("AuraBarPoint.png", 2)  # Вернули обратно масштаб 2
+        except Exception as e:
+            print(f"Ошибка при загрузке текстуры AuraBarPoint.png: {e}")
+            self.aura_bar_point_texture = None
 
         # Файлы текстур для кнопок действий
         texture_files = {
@@ -205,6 +268,23 @@ class InterfaceView(arcade.View):
                 max(0, color[1] - 30),
                 max(0, color[2] - 30)
             )
+
+        # Создаём спрайт для точки шкалы ауры
+        if self.aura_bar_point_texture:
+            self.aura_bar_point_sprite = arcade.Sprite()
+            self.aura_bar_point_sprite.texture = self.aura_bar_point_texture
+
+            # Увеличиваем размер точки, но не так агрессивно
+            target_size = 25  # Немного уменьшили целевую ширину/высоту
+            if self.aura_bar_point_sprite.width > target_size or self.aura_bar_point_sprite.height > target_size:
+                scale = target_size / max(self.aura_bar_point_sprite.width, self.aura_bar_point_sprite.height)
+                self.aura_bar_point_sprite.scale = scale
+            else:
+                # Если текстура меньше целевого размера, увеличиваем её
+                self.aura_bar_point_sprite.scale = 1.3
+
+            # Добавляем спрайт в список
+            self.aura_bar_point_list.append(self.aura_bar_point_sprite)
 
     """Создаёт спрайт кнопки с текстурой или цветом"""
 
@@ -418,6 +498,9 @@ class InterfaceView(arcade.View):
                 'zone_index': zone.zone_index
             }
 
+        # Сохраняем выбранную зону как целевую
+        self.target_zone_index = self.selected_button_zone
+
     """Перемещает выбор кнопок в обычном режиме"""
 
     def move_button_selection(self, direction):
@@ -547,7 +630,7 @@ class InterfaceView(arcade.View):
                 'height': selection_height - 10,
                 'texture': self.item_subwindow_texture,
                 'title': "Описание",
-                'description': "TBA"
+                'description': "TBA"  # Возвращаем оригинальное описание
             }
 
         self.selection_columns = []
@@ -666,6 +749,7 @@ class InterfaceView(arcade.View):
         self.temp_selected_item_index = None
         self.temp_selected_column = None
         self.original_zone_index = None
+        self.target_zone_index = None
         print("Текущий выбор сброшен.")
 
     """Перемещает выбор в окне выбора"""
@@ -729,8 +813,9 @@ class InterfaceView(arcade.View):
             self.ui_state = STATE_ZONE_SELECTION
             print(f"Выбран предмет: {selected_item['text']}. Теперь выберите зону для применения.")
 
-            # Сбрасываем выбор зоны (начинаем с первой зоны)
-            self.selected_button_zone = 0
+            # Инициализируем целевую зону (начинаем с зоны, из которой был сделан выбор)
+            self.target_zone_index = self.original_zone_index
+            self.selected_button_zone = self.original_zone_index
             self.move_zone_selection('')  # Инициализируем индикатор зоны
 
         else:
@@ -788,8 +873,9 @@ class InterfaceView(arcade.View):
         if not self.selected_item_for_zone:
             return
 
-        # Используем оригинальную зону, в которой был начат выбор, а не выбранную зону
-        zone_index = self.original_zone_index
+        # ВАЖНО: предмет подтверждается для зоны, из которой был сделан выбор (original_zone_index),
+        # но применяется к целевой зоне (target_zone_index)
+        zone_index = self.original_zone_index  # Зона, из которой делался выбор
 
         # Очищаем предыдущий выбор в этой зоне, если он был
         if zone_index in self.confirmed_selections:
@@ -799,9 +885,11 @@ class InterfaceView(arcade.View):
                 if button.zone_index == zone_index:
                     button.is_confirmed = False
 
+        # Сохраняем информацию о выборе
         self.confirmed_selections[zone_index] = {
             'type': 'itemIcon',
-            'item': self.selected_item_for_zone
+            'item': self.selected_item_for_zone,
+            'applied_to_zone': self.target_zone_index  # Сохраняем, к какой зоне применен
         }
 
         if zone_index not in self.selected_zones:
@@ -816,11 +904,13 @@ class InterfaceView(arcade.View):
                 self.selected_buttons[zone_index] = {
                     'zone_index': zone_index,
                     'button_index': button.button_index,
-                    'button_type': button.button_type
+                    'button_type': button.button_type,
+                    'applied_to_zone': self.target_zone_index
                 }
                 break
 
-        print(f"Предмет '{self.selected_item_for_zone}' применён к зоне {zone_index + 1}")
+        print(
+            f"Предмет '{self.selected_item_for_zone}' выбран в зоне {zone_index + 1} и применён к зоне {self.target_zone_index + 1}")
 
         # Сбрасываем временные данные
         self.selected_item_for_zone = None
@@ -828,6 +918,7 @@ class InterfaceView(arcade.View):
         self.temp_selected_item_index = None
         self.temp_selected_column = None
         self.original_zone_index = None
+        self.target_zone_index = None
 
         # Проверяем, все ли зоны выбраны
         if len(self.selected_zones) == 3:
@@ -902,11 +993,13 @@ class InterfaceView(arcade.View):
             self.update_button_indicator()
 
     """Обновляет текстуру кнопки при наведении"""
+
     def update_button_texture(self, button, is_hovered):
         if is_hovered != button.is_hovered:
             button.is_hovered = is_hovered
 
     """Добавляет единицу ауры"""
+
     def add_aura(self):
         self.aura += 1
         if self.aura > self.max_aura:
@@ -931,6 +1024,19 @@ class InterfaceView(arcade.View):
             bar_bottom = aura_y - segment_height
             bar_top = aura_y + segment_height
 
+            # Сначала рисуем точку шкалы ауры (под шкалой)
+            if self.aura_bar_point_sprite:
+                # Подвинуть на 2 пикселя вправо и на 3 пикселя вниз от центра шкалы
+                # Вычисляем центр шкалы по вертикали
+                bar_center_y = bar_bottom + (bar_top - bar_bottom) / 2
+                point_x = bar_left + 6
+                point_y = bar_center_y - 10
+
+                self.aura_bar_point_sprite.center_x = point_x
+                self.aura_bar_point_sprite.center_y = point_y
+                self.aura_bar_point_list.draw()  # Используем список спрайтов
+
+            # Затем рисуем саму шкалу ауры (поверх точки)
             bar_rect = arcade.LRBT(
                 left=bar_left,
                 right=bar_left + total_bar_width,
@@ -942,6 +1048,26 @@ class InterfaceView(arcade.View):
                 self.aura_bar_texture,
                 bar_rect
             )
+
+            # Добавляем счётчик ауры справа от панели - ПРОСТО ЦИФРУ БЕЗ ФОНА
+            # Подвинули числовой счётчик вправо (увеличили offset)
+            counter_x = panel_x + self.small_panel_width / 2 + 60  # Увеличили с 40 до 60 (сдвиг вправо)
+            counter_y = panel_y
+
+            # Текст счётчика (только текущее значение, без максимального)
+            text = arcade.Text(
+                f"{self.aura}",  # Только одно число
+                counter_x,
+                counter_y,
+                arcade.color.LIGHT_GRAY,
+                22,  # Увеличили размер шрифта с 16 до 22
+                anchor_x="center",
+                anchor_y="center",
+                bold=True,
+                font_name=self.font_name  # Применяем шрифт к счётчику
+            )
+            text.draw()
+
             return
 
         # Если текстура НЕ загружена, рисуем обычный интерфейс
@@ -995,13 +1121,14 @@ class InterfaceView(arcade.View):
             arcade.draw_rect_filled(segment_rect, segment_color)
             arcade.draw_rect_outline(segment_rect, arcade.color.LIGHT_GRAY, 1)
 
-        number_x = start_x + self.max_aura * (segment_width + segment_spacing) + 15
+        # Просто цифра без фона (только текущее значение) - подвинули вправо
+        number_x = start_x + self.max_aura * (segment_width + segment_spacing) + 25  # Увеличили с 15 до 25
         arcade.draw_text(
-            f"{self.aura}",
+            f"{self.aura}",  # Только одно число
             number_x - 5,
             aura_y,
             arcade.color.LIGHT_GRAY,
-            20,
+            24,  # Увеличили размер шрифта с 20 до 24
             anchor_x="center",
             anchor_y="center",
             bold=True
@@ -1048,7 +1175,8 @@ class InterfaceView(arcade.View):
 
         arcade.draw_rect_outline(subwindow_rect, arcade.color.LIGHT_GRAY, 2)
 
-        arcade.draw_text(
+        # Используем Text для заголовка
+        title_text = arcade.Text(
             self.item_subwindow['title'],
             self.item_subwindow['x'],
             self.item_subwindow['y'] + self.item_subwindow['height'] // 2 - 15,
@@ -1056,14 +1184,17 @@ class InterfaceView(arcade.View):
             14,
             anchor_x="center",
             anchor_y="center",
-            bold=True
+            bold=True,
+            font_name=self.font_name  # Применяем шрифт к заголовку
         )
+        title_text.draw()
 
         text_x = self.item_subwindow['x'] - self.item_subwindow['width'] / 2 + 10
         text_y = self.item_subwindow['y']
         text_width = self.item_subwindow['width'] - 20
 
-        arcade.draw_text(
+        # Используем Text для описания
+        description_text = arcade.Text(
             self.item_subwindow['description'],
             text_x,
             text_y,
@@ -1071,9 +1202,11 @@ class InterfaceView(arcade.View):
             12,
             anchor_x="left",
             anchor_y="center",
+            width=text_width,
             align="center",
-            width=text_width
+            font_name=self.font_name  # Применяем шрифт к описанию
         )
+        description_text.draw()
 
     """Отрисовывает окно выбора целей/предметов"""
 
@@ -1091,7 +1224,8 @@ class InterfaceView(arcade.View):
         arcade.draw_rect_outline(zone_rect, arcade.color.LIGHT_GRAY, 2)
 
         if self.selection_zone['title']:
-            arcade.draw_text(
+            # Используем Text для заголовка окна выбора
+            title_text = arcade.Text(
                 self.selection_zone['title'],
                 self.selection_zone['x'],
                 self.selection_zone['y'] + self.selection_zone['height'] // 2 - 15,
@@ -1099,8 +1233,10 @@ class InterfaceView(arcade.View):
                 16,
                 anchor_x="center",
                 anchor_y="center",
-                bold=True
+                bold=True,
+                font_name=self.font_name  # Применяем шрифт к заголовку окна
             )
+            title_text.draw()
 
         if self.divider_visible and self.divider_x and self.current_selection_type in ['actionIcon_1', 'actionIcon_2',
                                                                                        'actionIcon_3']:
@@ -1126,28 +1262,18 @@ class InterfaceView(arcade.View):
                 )
                 arcade.draw_rect_outline(highlight_rect, arcade.color.WHITE, 1)
 
-            # Используем кастомный шрифт для текста кнопок выбора
-            if self.custom_font:
-                arcade.draw_text(
-                    item['text'],
-                    item['x'],
-                    item['y'],
-                    arcade.color.WHITE,
-                    12,
-                    anchor_x="center",
-                    anchor_y="center",
-                    font_name=self.custom_font
-                )
-            else:
-                arcade.draw_text(
-                    item['text'],
-                    item['x'],
-                    item['y'],
-                    arcade.color.WHITE,
-                    12,
-                    anchor_x="center",
-                    anchor_y="center"
-                )
+            # Используем Text для текста кнопок выбора
+            item_text = arcade.Text(
+                item['text'],
+                item['x'],
+                item['y'],
+                arcade.color.WHITE,
+                12,
+                anchor_x="center",
+                anchor_y="center",
+                font_name=self.font_name
+            )
+            item_text.draw()
 
             if item['selected']:
                 # Для предметов - оранжевая обводка, для остального - зелёная
@@ -1183,7 +1309,7 @@ class InterfaceView(arcade.View):
         if self.ui_state == STATE_ALL_SELECTED:
             self.draw_aura_counter_minimized()
 
-            arcade.draw_text(
+            all_zones_text = arcade.Text(
                 "Все зоны выбраны",
                 SCREEN_WIDTH // 2,
                 SCREEN_HEIGHT // 2 + 50,
@@ -1191,17 +1317,22 @@ class InterfaceView(arcade.View):
                 24,
                 anchor_x="center",
                 anchor_y="center",
-                bold=True
+                bold=True,
+                font_name=self.font_name
             )
-            arcade.draw_text(
+            all_zones_text.draw()
+
+            reset_text = arcade.Text(
                 "Нажмите R для сброса",
                 SCREEN_WIDTH // 2,
                 SCREEN_HEIGHT // 2,
                 arcade.color.WHITE,
                 18,
                 anchor_x="center",
-                anchor_y="center"
+                anchor_y="center",
+                font_name=self.font_name
             )
+            reset_text.draw()
             return
 
         # Основная панель интерфейса
@@ -1257,7 +1388,7 @@ class InterfaceView(arcade.View):
         self.icons_list.draw()
 
         for i, icon in enumerate(self.icons_list):
-            arcade.draw_text(
+            zone_number_text = arcade.Text(
                 str(i + 1),  # Номер зоны
                 icon.center_x,
                 icon.center_y,
@@ -1265,8 +1396,10 @@ class InterfaceView(arcade.View):
                 10,
                 anchor_x="center",
                 anchor_y="center",
-                bold=True
+                bold=True,
+                font_name=self.font_name  # Применяем шрифт к номерам зон
             )
+            zone_number_text.draw()
 
         self.buttons_list.draw()
 
@@ -1313,7 +1446,8 @@ class InterfaceView(arcade.View):
         # Отрисовка подтверждённых выборов
         if self.confirmed_selections:
             selection_text_y = self.main_panel_y + self.main_panel_height / 2 + 70
-            arcade.draw_text(
+
+            confirmed_text = arcade.Text(
                 "Подтверждённые выборы:",
                 self.main_panel_x,
                 selection_text_y,
@@ -1321,43 +1455,87 @@ class InterfaceView(arcade.View):
                 14,
                 anchor_x="center",
                 anchor_y="center",
-                bold=True
+                bold=True,
+                font_name=self.font_name
             )
+            confirmed_text.draw()
 
             for i, (zone_idx, selection) in enumerate(self.confirmed_selections.items()):
                 zone_text = f"Зона {zone_idx + 1}: {selection['item']}"
-                arcade.draw_text(
+                if selection['type'] == 'itemIcon' and 'applied_to_zone' in selection:
+                    applied_to = selection['applied_to_zone']
+                    zone_text += f" (→ зона {applied_to + 1})"
+
+                selection_text = arcade.Text(
                     zone_text,
                     self.main_panel_x,
                     selection_text_y - 25 * (i + 1),
                     arcade.color.LIGHT_GRAY,
                     12,
                     anchor_x="center",
-                    anchor_y="center"
+                    anchor_y="center",
+                    font_name=self.font_name
                 )
+                selection_text.draw()
 
         # Отрисовка инструкции в режиме выбора зоны для предмета
         if self.ui_state == STATE_ZONE_SELECTION and self.selected_item_for_zone:
             instruction_y = self.main_panel_y - self.main_panel_height / 2 - 30
-            arcade.draw_text(
-                f"Выберите зону для предмета: {self.selected_item_for_zone}",
+
+            # Информация о выбранном предмете и текущей выбранной зоне
+            if self.original_zone_index is not None and self.target_zone_index is not None:
+                target_zone_text = f"Предмет будет применён к зоне {self.target_zone_index + 1}"
+            else:
+                target_zone_text = "Выберите зону для применения предмета"
+
+            item_text = arcade.Text(
+                f"Выбран предмет: {self.selected_item_for_zone}",
                 SCREEN_WIDTH // 2,
                 instruction_y,
                 arcade.color.YELLOW,
                 16,
                 anchor_x="center",
                 anchor_y="center",
-                bold=True
+                bold=True,
+                font_name=self.font_name
             )
-            arcade.draw_text(
-                "Нажмите ENTER для подтверждения, BACKSPACE для возврата к выбору предмета",
+            item_text.draw()
+
+            confirm_text = arcade.Text(
+                f"Выбор подтвердится для зоны {self.original_zone_index + 1}",
                 SCREEN_WIDTH // 2,
                 instruction_y - 25,
                 arcade.color.LIGHT_GRAY,
+                14,
+                anchor_x="center",
+                anchor_y="center",
+                font_name=self.font_name
+            )
+            confirm_text.draw()
+
+            target_text = arcade.Text(
+                target_zone_text,
+                SCREEN_WIDTH // 2,
+                instruction_y - 50,
+                arcade.color.LIGHT_GRAY,
+                14,
+                anchor_x="center",
+                anchor_y="center",
+                font_name=self.font_name
+            )
+            target_text.draw()
+
+            controls_text = arcade.Text(
+                "Нажмите ENTER для подтверждения, BACKSPACE для возврата к выбору предмета",
+                SCREEN_WIDTH // 2,
+                instruction_y - 75,
+                arcade.color.LIGHT_GRAY,
                 12,
                 anchor_x="center",
-                anchor_y="center"
+                anchor_y="center",
+                font_name=self.font_name
             )
+            controls_text.draw()
 
     def on_mouse_motion(self, x, y, dx, dy):
         pass
