@@ -1,4 +1,4 @@
-""" Name: Максим | Date: 25.01.2026 | WhatYouDo: Добавил шрифты """
+""" Name: Максим | Date: 26.01.2026 | WhatYouDo: Заставил шкалу ауры работать, добавил иконки к основным действиям и поменял выделение у выбранных зон """
 from PIL import Image
 import arcade
 import io
@@ -21,6 +21,21 @@ STATE_NORMAL = "normal"  # Обычный режим
 STATE_SELECTION = "selection"  # Режим выбора целей/предметов
 STATE_ALL_SELECTED = "all_selected"  # Все зоны выбраны
 STATE_ZONE_SELECTION = "zone_selection"  # Режим выбора зоны для предмета
+
+# Количество спрайтов для каждого уровня ауры
+AURA_POINT_COUNTS = {
+    0: 0,
+    1: 21,
+    2: 41,
+    3: 62,
+    4: 82,
+    5: 102,
+    6: 123,
+    7: 143,
+    8: 164,
+    9: 184,
+    10: 204
+}
 
 """Класс Юры"""
 
@@ -79,6 +94,7 @@ class InterfaceView(arcade.View):
         self.zones_list = arcade.SpriteList()  # Список зон (3 зоны)
         self.icons_list = arcade.SpriteList()  # Список иконок зон
         self.selection_buttons_list = arcade.SpriteList()  # Список кнопок выбора целей
+        self.selection_icons_list = arcade.SpriteList()  # Список иконок для кнопок выбора
 
         # Переменные для режима выбора
         self.selection_zone = None  # Окно выбора целей
@@ -114,9 +130,11 @@ class InterfaceView(arcade.View):
         self.selection_button_texture = None  # Текстура кнопок выбора
         self.item_subwindow_texture = None  # Текстура подокна предметов
         self.aura_bar_texture = None  # Текстура шкалы ауры
-        self.aura_bar_point_texture = None  # Текстура точки шкалы ауры
-        self.aura_bar_point_sprite = None  # Спрайт точки шкалы ауры
-        self.aura_bar_point_list = arcade.SpriteList()  # Список для точки шкалы ауры
+        self.aura_bar_point_texture_1 = None  # Текстура первой точки шкалы ауры
+        self.aura_bar_point_texture_2 = None  # Текстура средней точки шкалы ауры
+        self.aura_bar_point_texture_3 = None  # Текстура последней точки шкалы ауры (только для 10 уровня)
+        self.aura_bar_point_sprites = arcade.SpriteList()  # Список спрайтов точек шкалы ауры
+        self.selection_icon_textures = {}  # Текстуры иконок для кнопок выбора
 
         # Шрифт
         self.font_name = None
@@ -140,28 +158,100 @@ class InterfaceView(arcade.View):
         self.create_interface()
         self.update_button_indicator()
 
+        # Инициализация спрайтов точек ауры
+        self.init_aura_point_sprites()
+
+    """Инициализирует спрайты точек ауры в соответствии с текущим уровнем ауры"""
+
+    def init_aura_point_sprites(self):
+        self.update_aura_point_sprites()
+
+    """Обновляет спрайты точек ауры в соответствии с текущим уровнем ауры"""
+
+    def update_aura_point_sprites(self):
+        # Очищаем старые спрайты
+        self.aura_bar_point_sprites.clear()
+
+        # Получаем количество спрайтов для текущего уровня ауры
+        point_count = AURA_POINT_COUNTS.get(self.aura, 0)
+
+        if point_count == 0:
+            return
+
+        # Загружаем текстуры
+        textures_available = all([
+            self.aura_bar_point_texture_1,
+            self.aura_bar_point_texture_2
+        ])
+
+        # Создаем спрайты
+        for i in range(point_count):
+            # Если это максимальный уровень маны (10) и предпоследняя точка - пропускаем её (создаём пробел)
+            if self.aura == 10 and i == point_count - 2:
+                continue  # Пропускаем создание предпоследнего спрайта - это будет пробел
+
+            sprite = arcade.Sprite()
+
+            # ВАЖНО: текстура 3 только для ауры 10 И последней точки
+            is_last_point = (i == point_count - 1)
+            is_max_aura = (self.aura == 10)
+
+            # Выбираем текстуру в зависимости от позиции и уровня ауры
+            if i == 0:  # Первая точка
+                if self.aura_bar_point_texture_1:
+                    sprite.texture = self.aura_bar_point_texture_1
+                elif textures_available:
+                    sprite.texture = self.aura_bar_point_texture_1
+                else:
+                    continue
+            elif is_last_point and is_max_aura:  # Последняя точка при ауре 10
+                if self.aura_bar_point_texture_3:
+                    sprite.texture = self.aura_bar_point_texture_3
+                elif self.aura_bar_point_texture_2:
+                    sprite.texture = self.aura_bar_point_texture_2
+                else:
+                    continue
+            else:  # Остальные средние точки
+                if self.aura_bar_point_texture_2:
+                    sprite.texture = self.aura_bar_point_texture_2
+                elif textures_available:
+                    sprite.texture = self.aura_bar_point_texture_2
+                else:
+                    continue
+
+            # Настраиваем масштаб
+            target_width = 40  # Обычная ширина
+            target_height = 30  # Обычная высота
+
+            scale_x = target_width / sprite.width
+            scale_y = target_height / sprite.height
+            sprite.scale = min(scale_x, scale_y)
+
+            # Позиция будет установлена при отрисовке
+            self.aura_bar_point_sprites.append(sprite)
+
+    """Загружает кастомный шрифт"""
+
     def load_font(self):
-        """Загружает кастомный шрифт как в системе диалогов"""
         font_filename = "web_ibm_mda.ttf"
 
-        # Способ 1: Пробуем тот же подход, что и в системе диалогов
+        # Загружаю шрифт
         try:
             # Проверяем, существует ли файл
             if os.path.exists(font_filename):
                 # Регистрируем шрифт в pyglet
                 pyglet.font.add_file(font_filename)
 
-                # Получаем имя шрифта через matplotlib.font_manager
+                # Получаем имя шрифта через matplotlib.font_manager(использовалось для проверки)
                 font_prop = fm.FontProperties(fname=font_filename)
                 self.font_name = font_prop.get_name()
-                print(f"✓ Шрифт загружен! Имя: {self.font_name}")
                 return
             else:
-                print(f"✗ Файл шрифта не найден в текущей директории: {font_filename}")
+                print(f"Файл шрифта не найден в текущей директории: {font_filename}")
         except Exception as e:
-            print(f"✗ Ошибка при загрузке шрифта: {e}")
+            print(f"Ошибка при загрузке шрифта: {e}")
 
-        # Способ 2: Пробуем найти файл в разных местах
+        # План Б
         font_paths = [
             font_filename,
             os.path.join(".", font_filename),
@@ -174,21 +264,21 @@ class InterfaceView(arcade.View):
                     # Регистрируем шрифт в pyglet
                     pyglet.font.add_file(font_path)
 
-                    # Получаем имя шрифта через matplotlib.font_manager
+                    # Получаем имя шрифта через matplotlib.font_manager(использовалось для проверки)
                     font_prop = fm.FontProperties(fname=font_path)
                     self.font_name = font_prop.get_name()
-                    print(f"✓ Шрифт загружен из {font_path}! Имя: {self.font_name}")
                     return
             except Exception as e:
-                print(f"✗ Ошибка при загрузке шрифта из {font_path}: {e}")
+                print(f"Ошибка при загрузке шрифта из {font_path}: {e}")
                 continue
 
         # Если ничего не помогло, используем стандартный шрифт
-        print("⚠ Шрифт web_ibm_mda.ttf не найден. Используется стандартный шрифт.")
+        print("Шрифт web_ibm_mda.ttf не найден. Используется стандартный шрифт.")
         self.font_name = "Arial"
 
+    """Загружает все текстуры для интерфейса"""
+
     def load_textures(self):
-        """Загружает все текстуры для интерфейса"""
         try:
             self.zone_texture = EasySprite.upscale_image("Field.png", 2)
         except Exception as e:
@@ -214,12 +304,37 @@ class InterfaceView(arcade.View):
             print(f"Ошибка при загрузке текстуры AuraBar.png: {e}")
             self.aura_bar_texture = None
 
+        # Загружаем текстуры точек шкалы ауры
         try:
-            # Загружаем текстуру точки шкалы ауры с корректным масштабированием
-            self.aura_bar_point_texture = EasySprite.upscale_image("AuraBarPoint.png", 2)  # Вернули обратно масштаб 2
+            # Первая точка
+            self.aura_bar_point_texture_1 = EasySprite.upscale_image("AuraBarPoint1.png", 2)
         except Exception as e:
-            print(f"Ошибка при загрузке текстуры AuraBarPoint.png: {e}")
-            self.aura_bar_point_texture = None
+            print(f"✗ Ошибка при загрузке текстуры AuraBarPoint1.png: {e}")
+            self.aura_bar_point_texture_1 = None
+
+        try:
+            # Средняя точка
+            self.aura_bar_point_texture_2 = EasySprite.upscale_image("AuraBarPoint2.png", 2)
+        except Exception as e:
+            print(f"Ошибка при загрузке текстуры AuraBarPoint2.png: {e}")
+            self.aura_bar_point_texture_2 = None
+
+        try:
+            # Последняя точка (только для ауры 10)
+            self.aura_bar_point_texture_3 = EasySprite.upscale_image("AuraBarPoint3.png", 2)
+        except Exception as e:
+            print(f"Ошибка при загрузке текстуры AuraBarPoint3.png: {e}")
+            self.aura_bar_point_texture_3 = None
+
+        # Если не удалось загрузить специальные текстуры, пробуем загрузить старую
+        if not (self.aura_bar_point_texture_1 and self.aura_bar_point_texture_2):
+            try:
+                fallback_texture = EasySprite.upscale_image("AuraBarPoint.png", 2)
+                self.aura_bar_point_texture_1 = fallback_texture
+                self.aura_bar_point_texture_2 = fallback_texture
+                print("Используется универсальная текстура AuraBarPoint.png")
+            except Exception as e:
+                print(f"Ошибка при загрузке универсальной текстуры AuraBarPoint.png: {e}")
 
         # Файлы текстур для кнопок действий
         texture_files = {
@@ -269,22 +384,29 @@ class InterfaceView(arcade.View):
                 max(0, color[2] - 30)
             )
 
-        # Создаём спрайт для точки шкалы ауры
-        if self.aura_bar_point_texture:
-            self.aura_bar_point_sprite = arcade.Sprite()
-            self.aura_bar_point_sprite.texture = self.aura_bar_point_texture
+        # Загрузка текстур иконок для кнопок выбора
+        selection_icon_files = {
+            # Для 1 зоны
+            'zone1_col1': 'actionIcon_forText1_0.png',
+            'zone1_col2_1': 'actionIcon_forText1_1.png',
+            'zone1_col2_2': 'actionIcon_forText1_2.png',
+            # Для 2 зоны
+            'zone2_col1': 'actionIcon_forText2_0.png',
+            'zone2_col2_1': 'actionIcon_forText2_1.png',
+            'zone2_col2_2': 'actionIcon_forText2_2.png',
+            # Для 3 зоны
+            'zone3_col1': 'actionIcon_forText3_0.png',
+            'zone3_col2_1': 'actionIcon_forText3_1.png',
+            'zone3_col2_2': 'actionIcon_forText3_2.png',
+        }
 
-            # Увеличиваем размер точки, но не так агрессивно
-            target_size = 25  # Немного уменьшили целевую ширину/высоту
-            if self.aura_bar_point_sprite.width > target_size or self.aura_bar_point_sprite.height > target_size:
-                scale = target_size / max(self.aura_bar_point_sprite.width, self.aura_bar_point_sprite.height)
-                self.aura_bar_point_sprite.scale = scale
-            else:
-                # Если текстура меньше целевого размера, увеличиваем её
-                self.aura_bar_point_sprite.scale = 1.3
-
-            # Добавляем спрайт в список
-            self.aura_bar_point_list.append(self.aura_bar_point_sprite)
+        for name, filename in selection_icon_files.items():
+            try:
+                upscaled_texture = EasySprite.upscale_image(filename, 4)
+                self.selection_icon_textures[name] = upscaled_texture
+            except Exception as e:
+                print(f"Ошибка при загрузке текстуры {filename}: {e}")
+                self.selection_icon_textures[name] = None
 
     """Создаёт спрайт кнопки с текстурой или цветом"""
 
@@ -368,7 +490,7 @@ class InterfaceView(arcade.View):
 
     """Создаёт спрайт кнопки выбора целей"""
 
-    def create_selection_button_sprite(self, x, y, width, height, text):
+    def create_selection_button_sprite(self, x, y, width, height, text, has_icon=False, icon_texture=None):
         if self.selection_button_texture:
             sprite = arcade.Sprite()
             sprite.texture = self.selection_button_texture
@@ -387,7 +509,29 @@ class InterfaceView(arcade.View):
             sprite.center_y = y
 
         sprite.button_text = text
+        sprite.has_icon = has_icon
+        sprite.icon_texture = icon_texture
         return sprite
+
+    """Создаёт спрайт иконки для кнопки выбора"""
+
+    def create_selection_icon_sprite(self, x, y, texture_name):
+        if texture_name in self.selection_icon_textures and self.selection_icon_textures[texture_name] is not None:
+            sprite = arcade.Sprite()
+            sprite.texture = self.selection_icon_textures[texture_name]
+            sprite.center_x = x
+            sprite.center_y = y
+
+            # Масштабируем иконку
+            target_width = 30
+            target_height = 30
+            scale_x = target_width / sprite.width
+            scale_y = target_height / sprite.height
+            sprite.scale = min(scale_x, scale_y)
+
+            sprite.texture_name = texture_name
+            return sprite
+        return None
 
     """Создаёт все элементы интерфейса: зоны, иконки и кнопки"""
 
@@ -585,6 +729,7 @@ class InterfaceView(arcade.View):
         self.original_zone_index = zone_index  # Сохраняем оригинальную зону
 
         self.selection_buttons_list.clear()
+        self.selection_icons_list.clear()
         self.item_subwindow = None
 
         # Настройки для разных типов выбора
@@ -593,21 +738,25 @@ class InterfaceView(arcade.View):
             item_prefix = "Враг"
             column2_items = ["Персонаж 1", "Персонаж 2"]
             show_subwindow = False
+            show_icons = True
         elif selection_type == 'actionIcon_2':
             title = "Выбор цели для защиты"
             item_prefix = "Союзник"
             column2_items = ["Персонаж 1", "Персонаж 2"]
             show_subwindow = False
+            show_icons = True
         elif selection_type == 'actionIcon_3':
             title = "Выбор цели для лечения"
             item_prefix = "Пациент"
             column2_items = ["Персонаж 1", "Персонаж 2"]
             show_subwindow = False
+            show_icons = True
         elif selection_type == 'itemIcon':
             title = None
             item_prefix = "Предмет"
             column2_items = ["Предмет 1", "Предмет 2", "Предмет 3"]
             show_subwindow = True
+            show_icons = False
 
         selection_height = 140
         selection_y = 70
@@ -619,7 +768,8 @@ class InterfaceView(arcade.View):
             'height': selection_height,
             'color': arcade.color.BLACK,
             'title': title,
-            'show_subwindow': show_subwindow
+            'show_subwindow': show_subwindow,
+            'show_icons': show_icons
         }
 
         if show_subwindow:
@@ -630,7 +780,7 @@ class InterfaceView(arcade.View):
                 'height': selection_height - 10,
                 'texture': self.item_subwindow_texture,
                 'title': "Описание",
-                'description': "TBA"  # Возвращаем оригинальное описание
+                'description': "TBA"
             }
 
         self.selection_columns = []
@@ -670,15 +820,58 @@ class InterfaceView(arcade.View):
                     item_num = col * 3 + row + 1
                     item_text = f"{item_prefix} {item_num}"
 
+                # Определяем иконку для кнопки, если нужно
+                icon_texture = None
+                has_icon = False
+
+                if show_icons and selection_type in ['actionIcon_1', 'actionIcon_2', 'actionIcon_3']:
+                    has_icon = True
+                    if self.active_zone_index == 0:  # Зона 1
+                        if col == 0:
+                            icon_texture = 'zone1_col1'
+                        elif col == 1:
+                            if row == 0:
+                                icon_texture = 'zone1_col2_1'
+                            elif row == 1:
+                                icon_texture = 'zone1_col2_2'
+                    elif self.active_zone_index == 1:  # Зона 2
+                        if col == 0:
+                            icon_texture = 'zone2_col1'
+                        elif col == 1:
+                            if row == 0:
+                                icon_texture = 'zone2_col2_1'
+                            elif row == 1:
+                                icon_texture = 'zone2_col2_2'
+                    elif self.active_zone_index == 2:  # Зона 3
+                        if col == 0:
+                            icon_texture = 'zone3_col1'
+                        elif col == 1:
+                            if row == 0:
+                                icon_texture = 'zone3_col2_1'
+                            elif row == 1:
+                                icon_texture = 'zone3_col2_2'
+
                 button_sprite = self.create_selection_button_sprite(
                     column_x,
                     item_y,
                     item_width,
                     item_height,
-                    item_text
+                    item_text,
+                    has_icon=has_icon,
+                    icon_texture=icon_texture
                 )
 
                 self.selection_buttons_list.append(button_sprite)
+
+                # Создаем спрайт иконки, если есть
+                if has_icon and icon_texture:
+                    icon_sprite = self.create_selection_icon_sprite(
+                        column_x - item_width / 2 + 15,
+                        item_y,
+                        icon_texture
+                    )
+                    if icon_sprite:
+                        self.selection_icons_list.append(icon_sprite)
 
                 item = {
                     'x': column_x,
@@ -690,6 +883,8 @@ class InterfaceView(arcade.View):
                     'row': row,
                     'selected': False,
                     'item_num': row + 1 if col == 0 else row + 4,
+                    'has_icon': has_icon,
+                    'icon_texture': icon_texture
                 }
                 column_items.append(item)
                 self.selection_items.append(item)
@@ -744,6 +939,7 @@ class InterfaceView(arcade.View):
         self.active_zone_index = None
         self.item_subwindow = None
         self.selection_buttons_list.clear()
+        self.selection_icons_list.clear()
         self.selected_item_for_zone = None
         self.temp_selected_item = None
         self.temp_selected_item_index = None
@@ -938,6 +1134,7 @@ class InterfaceView(arcade.View):
             self.active_zone_index = None
             self.item_subwindow = None
             self.selection_buttons_list.clear()
+            self.selection_icons_list.clear()
 
             # Переходим к следующей зоне
             self.move_to_next_zone()
@@ -1005,6 +1202,8 @@ class InterfaceView(arcade.View):
         if self.aura > self.max_aura:
             self.aura = 0
         print(f"Аура: {self.aura}/{self.max_aura}")
+        # Обновляем спрайты точек ауры при изменении уровня маны
+        self.update_aura_point_sprites()
 
     """Отрисовывает счётчик ауры в панели"""
 
@@ -1024,19 +1223,45 @@ class InterfaceView(arcade.View):
             bar_bottom = aura_y - segment_height
             bar_top = aura_y + segment_height
 
-            # Сначала рисуем точку шкалы ауры (под шкалой)
-            if self.aura_bar_point_sprite:
-                # Подвинуть на 2 пикселя вправо и на 3 пикселя вниз от центра шкалы
-                # Вычисляем центр шкалы по вертикали
-                bar_center_y = bar_bottom + (bar_top - bar_bottom) / 2
-                point_x = bar_left + 6
-                point_y = bar_center_y - 10
+            # 1. Рисуем спрайты точек ауры в ОДНОЙ линии
+            # Вычисляем общую длину для всех спрайтов
+            point_count = AURA_POINT_COUNTS.get(self.aura, 0)
+            point_start_x = bar_left + 6
+            point_spacing = 1
 
-                self.aura_bar_point_sprite.center_x = point_x
-                self.aura_bar_point_sprite.center_y = point_y
-                self.aura_bar_point_list.draw()  # Используем список спрайтов
+            # Если это максимальный уровень ауры, создаём увеличенный пробел между предпоследней и последней точкой
+            extra_spacing_for_gap = 0
+            if self.aura == 10:
+                # Для 10 уровня создаём пробел, пропуская одну точку
+                point_count -= 1  # Уменьшаем количество точек, так как одну пропускаем
+                # Увеличиваем отступ перед последней точкой
+                extra_spacing_for_gap = 2  # Дополнительный пробел
 
-            # Затем рисуем саму шкалу ауры (поверх точки)
+            # Вычисляем центр шкалы по вертикали
+            bar_center_y = bar_bottom + (bar_top - bar_bottom) / 2
+            point_y = bar_center_y - 10  # Центрируем спрайты по вертикали
+
+            # Устанавливаем позиции для спрайтов
+            points_placed = 0
+            for i, sprite in enumerate(self.aura_bar_point_sprites):
+                if points_placed >= point_count:
+                    break
+
+                # Вычисляем позицию по X
+                point_x = point_start_x + (points_placed * point_spacing)
+
+                # Если это последняя точка при максимальном уровне ауры, добавляем дополнительный пробел
+                if self.aura == 10 and points_placed == point_count - 1:
+                    point_x += extra_spacing_for_gap
+
+                sprite.center_x = point_x
+                sprite.center_y = point_y
+                points_placed += 1
+
+            # Отрисовываем спрайты точек ауры
+            self.aura_bar_point_sprites.draw()
+
+            # 2. Затем рисуем саму шкалу ауры ПОВЕРХ всех спрайтов
             bar_rect = arcade.LRBT(
                 left=bar_left,
                 right=bar_left + total_bar_width,
@@ -1050,17 +1275,16 @@ class InterfaceView(arcade.View):
             )
 
             # Добавляем счётчик ауры справа от панели - ПРОСТО ЦИФРУ БЕЗ ФОНА
-            # Подвинули числовой счётчик вправо (увеличили offset)
-            counter_x = panel_x + self.small_panel_width / 2 + 60  # Увеличили с 40 до 60 (сдвиг вправо)
+            counter_x = panel_x + self.small_panel_width / 2 + 60
             counter_y = panel_y
 
             # Текст счётчика (только текущее значение, без максимального)
             text = arcade.Text(
-                f"{self.aura}",  # Только одно число
+                f"{self.aura}",
                 counter_x,
                 counter_y,
                 arcade.color.LIGHT_GRAY,
-                22,  # Увеличили размер шрифта с 16 до 22
+                22,
                 anchor_x="center",
                 anchor_y="center",
                 bold=True,
@@ -1121,14 +1345,14 @@ class InterfaceView(arcade.View):
             arcade.draw_rect_filled(segment_rect, segment_color)
             arcade.draw_rect_outline(segment_rect, arcade.color.LIGHT_GRAY, 1)
 
-        # Просто цифра без фона (только текущее значение) - подвинули вправо
-        number_x = start_x + self.max_aura * (segment_width + segment_spacing) + 25  # Увеличили с 15 до 25
+        # Просто цифра без фона
+        number_x = start_x + self.max_aura * (segment_width + segment_spacing) + 25
         arcade.draw_text(
-            f"{self.aura}",  # Только одно число
+            f"{self.aura}",
             number_x - 5,
             aura_y,
             arcade.color.LIGHT_GRAY,
-            24,  # Увеличили размер шрифта с 20 до 24
+            24,
             anchor_x="center",
             anchor_y="center",
             bold=True
@@ -1250,6 +1474,7 @@ class InterfaceView(arcade.View):
             )
 
         self.selection_buttons_list.draw()
+        self.selection_icons_list.draw()
 
         for item in self.selection_items:
             # Только для режима выбора предметов (STATE_SELECTION) и если предмет не выбран, рисуем белую обводку
@@ -1262,10 +1487,14 @@ class InterfaceView(arcade.View):
                 )
                 arcade.draw_rect_outline(highlight_rect, arcade.color.WHITE, 1)
 
-            # Используем Text для текста кнопок выбора
+            # Используем Text для текста кнопок выбора - подвинули текст вправо, если есть иконка
+            text_x = item['x']
+            if item['has_icon']:
+                text_x += 10  # Сдвигаем текст вправо, если есть иконка
+
             item_text = arcade.Text(
                 item['text'],
-                item['x'],
+                text_x,
                 item['y'],
                 arcade.color.WHITE,
                 12,
@@ -1374,8 +1603,17 @@ class InterfaceView(arcade.View):
                 top=zone.center_y + zone.height / 2
             )
 
+            # Определяем цвета для подтверждённых зон
+            zone_colors = {
+                0: (143, 43, 43),  # Зона 1: тёмно-красный
+                1: (82, 173, 192),  # Зона 2: бирюзовый
+                2: (64, 160, 121),  # Зона 3: зелёный
+            }
+
             if zone.zone_index in self.selected_zones:
-                arcade.draw_rect_outline(zone_rect, arcade.color.RED, 3)  # Выбранная зона
+                # Используем индивидуальный цвет для подтверждённой зоны
+                zone_color = zone_colors.get(zone.zone_index, arcade.color.RED)
+                arcade.draw_rect_outline(zone_rect, zone_color, 3)  # Выбранная зона
             elif self.ui_state == STATE_ZONE_SELECTION and zone.zone_index == self.selected_button_zone:
                 # В режиме выбора зоны для предмета - оранжевая обводка
                 arcade.draw_rect_outline(zone_rect, arcade.color.ORANGE, 3)  # Активная зона для предмета
@@ -1412,7 +1650,14 @@ class InterfaceView(arcade.View):
             )
 
             if button.is_confirmed:
-                arcade.draw_rect_outline(button_rect, arcade.color.RED, 3)
+                # Используем те же цвета, что и для зон
+                zone_colors = {
+                    0: (143, 43, 43),  # Зона 1
+                    1: (82, 173, 192),  # Зона 2
+                    2: (64, 160, 121),  # Зона 3
+                }
+                zone_color = zone_colors.get(button.zone_index, arcade.color.RED)
+                arcade.draw_rect_outline(button_rect, zone_color, 3)
 
         # Индикатор зоны в режиме выбора зоны для предмета
         if self.ui_state == STATE_ZONE_SELECTION and self.button_indicator:
