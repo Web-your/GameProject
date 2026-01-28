@@ -233,7 +233,7 @@ class InterfaceView(arcade.View):
     """Загружает кастомный шрифт"""
 
     def load_font(self):
-        font_filename = "web_ibm_mda.ttf"
+        font_filename = "../Fight_Mechanic/Static/Interface/web_ibm_mda.ttf"
 
         # Загружаю шрифт
         try:
@@ -280,26 +280,27 @@ class InterfaceView(arcade.View):
 
     def load_textures(self):
         try:
-            self.zone_texture = EasySprite.upscale_image("Field.png", 2)
+            self.zone_texture = EasySprite.upscale_image("../Fight_Mechanic/Static/Interface/Field.png", 2)
         except Exception as e:
             print(f"Ошибка при загрузке текстуры Field.png: {e}")
             self.zone_texture = None
 
         try:
-            self.selection_button_texture = EasySprite.upscale_image("SelectionLine.png", 4)
+            self.selection_button_texture = EasySprite.upscale_image(
+                "../Fight_Mechanic/Static/Interface/SelectionLine.png", 4)
         except Exception as e:
             print(f"Ошибка при загрузке текстуры SelectionLine.png: {e}")
             self.selection_button_texture = None
 
         try:
-            self.item_subwindow_texture = EasySprite.upscale_image("Field.png", 2)
+            self.item_subwindow_texture = EasySprite.upscale_image("../Fight_Mechanic/Static/Interface/Field.png", 2)
         except Exception as e:
             print(f"Ошибка при загрузке текстуры Field.png: {e}")
             self.item_subwindow_texture = None
 
         try:
             # Загружаем текстуру ауры
-            self.aura_bar_texture = EasySprite.upscale_image("AuraBar.png", 2)
+            self.aura_bar_texture = EasySprite.upscale_image("../Fight_Mechanic/Static/Interface/AuraBar.png", 2)
         except Exception as e:
             print(f"Ошибка при загрузке текстуры AuraBar.png: {e}")
             self.aura_bar_texture = None
@@ -307,21 +308,24 @@ class InterfaceView(arcade.View):
         # Загружаем текстуры точек шкалы ауры
         try:
             # Первая точка
-            self.aura_bar_point_texture_1 = EasySprite.upscale_image("AuraBarPoint1.png", 2)
+            self.aura_bar_point_texture_1 = EasySprite.upscale_image(
+                "../Fight_Mechanic/Static/Interface/AuraBarPoint1.png", 2)
         except Exception as e:
             print(f"✗ Ошибка при загрузке текстуры AuraBarPoint1.png: {e}")
             self.aura_bar_point_texture_1 = None
 
         try:
             # Средняя точка
-            self.aura_bar_point_texture_2 = EasySprite.upscale_image("AuraBarPoint2.png", 2)
+            self.aura_bar_point_texture_2 = EasySprite.upscale_image(
+                "../Fight_Mechanic/Static/Interface/AuraBarPoint2.png", 2)
         except Exception as e:
             print(f"Ошибка при загрузке текстуры AuraBarPoint2.png: {e}")
             self.aura_bar_point_texture_2 = None
 
         try:
             # Последняя точка (только для ауры 10)
-            self.aura_bar_point_texture_3 = EasySprite.upscale_image("AuraBarPoint3.png", 2)
+            self.aura_bar_point_texture_3 = EasySprite.upscale_image(
+                "../Fight_Mechanic/Static/Interface/AuraBarPoint3.png", 2)
         except Exception as e:
             print(f"Ошибка при загрузке текстуры AuraBarPoint3.png: {e}")
             self.aura_bar_point_texture_3 = None

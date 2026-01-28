@@ -11,20 +11,38 @@ from pyglet.resource import texture
 import EasySprite
 
 
-class Dialog():
+def set_break(_dict, data):
+    if data == "true":
+        _dict["break"] = True
+    else:
+        _dict["break"] = False
+    return _dict
+
+
+class Dialog:
     def __init__(self, coordinates, text=None, file_text=None, width=None):
-        self.base_settings = {"id": 0, "font": "", "color": (255, 255, 255), "font_size": 18,
-                              "twitch": 0, "time_appear": 0.05,"can_break": True, "break": False, "text": ""}
+        self.base_settings = {
+            "id": 0,
+            "font": "",
+            "color": (255, 255, 255),
+            "font_size": 18,
+            "twitch": 0,
+            "time_appear": 0.05,
+            "can_break": True,
+            "break": False,
+            "text": ""
+        }
+
         self.x = coordinates[0]
         self.y = coordinates[1]
         self.replicas = []
         self.replicas_active = 0
-        self.simvol_time = 0
+        self.symbol_time = 0
         self.width = width
-        self.visable_text = []
+        self.visible_text = []
         self.shift_x = 0
         self.shift_y = 0
-        self.replic = 0
+        self.replica = 0
         if file_text and not text:
             with open(file_text, "r", encoding="utf8") as file:
                 self.data = file.read().split("<*>")
@@ -33,37 +51,30 @@ class Dialog():
             self.data = text.split("<*>")
             self.refresh_data()
 
-    def set_font(self, dict, data):
-        dict["font"] = data
-        return dict
+    def set_font(self, _dict, data):
+        _dict["font"] = data
+        return _dict
 
-    def set_font_size(self, dict, data):
-        dict["font_size"] = int(data)
-        return dict
+    def set_font_size(self, _dict, data):
+        _dict["font_size"] = int(data)
+        return _dict
 
-    def set_color(self, dict, data):
+    def set_color(self, _dict, data):
         if data.startswith("rgb("):
-            dict["color"] = tuple(map(int, [item.strip() for item in data[4:-1].split(",")]))
-        return dict
+            _dict["color"] = tuple(map(int, [item.strip() for item in data[4:-1].split(",")]))
+        return _dict
 
-    def set_twitch(self, dict, data):
-        dict["twitch"] = float(data)
-        return dict
+    def set_twitch(self, _dict, data):
+        _dict["twitch"] = float(data)
+        return _dict
 
-    def set_time_appear(self, dict, data):
-        dict["time_appear"] = float(data)
-        return dict
-
-    def set_break(self, dict, data):
-        if data == "true":
-            dict["break"] = True
-        else:
-            dict["break"] = False
-        return dict
+    def set_time_appear(self, _dict, data):
+        _dict["time_appear"] = float(data)
+        return _dict
 
     def refresh_data(self):
         all_comands = {"font": self.set_font, "color": self.set_color, "twitch": self.set_twitch,
-                       "time_appear": self.set_time_appear, "break": self.set_break, "font_size": self.set_font_size}
+                       "time_appear": self.set_time_appear, "break": set_break, "font_size": self.set_font_size}
         pattern = "<([^>]*)>(.*?)<\/>"
         self.replicas = []
         content = self.data
@@ -104,11 +115,11 @@ class Dialog():
             self.replicas.append(words)
 
     def update_text(self, delta_time):
-        self.simvol_time += delta_time
-        replic = self.replicas[self.replicas_active]
-        if self.replic < len(replic):
-            item = replic[self.replic]
-            chars_to_show = min(int(self.simvol_time / item["time_appear"]), len(item["text"]))
+        self.symbol_time += delta_time
+        replica = self.replicas[self.replicas_active]
+        if self.replica < len(replica):
+            item = replica[self.replica]
+            chars_to_show = min(int(self.symbol_time / item["time_appear"]), len(item["text"]))
             pyglet.font.add_file(item["font"])
             font_prop = fm.FontProperties(fname=item["font"])
 
@@ -130,31 +141,31 @@ class Dialog():
                     font_name=font_prop.get_name(),
                 )
 
-                if item["id"] >= len(self.visable_text):
-                    self.visable_text.append(text_obj)
+                if item["id"] >= len(self.visible_text):
+                    self.visible_text.append(text_obj)
                 else:
-                    self.visable_text[item["id"]] = text_obj
+                    self.visible_text[item["id"]] = text_obj
 
             if chars_to_show >= len(item["text"]):
                 self.shift_x += text_width
-                self.simvol_time = 0
-                self.replic += 1
+                self.symbol_time = 0
+                self.replica += 1
 
     def update_replicas(self):
         if self.replicas_active + 1 < len(self.replicas):
             self.replicas_active += 1
-            self.replic = 0
-            self.visable_text = []
-            self.simvol_time = 0
+            self.replica = 0
+            self.visible_text = []
+            self.symbol_time = 0
             self.shift_x = 0
             self.shift_y = 0
 
-    def get_replic(self):
+    def get_replica(self):
         ...
 
-    def get_active_replic(self):
+    def get_active_replica(self):
         ...
 
     def draw(self):
-        for item in self.visable_text:
+        for item in self.visible_text:
             item.draw()

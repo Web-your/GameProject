@@ -11,7 +11,7 @@ from pyglet.resource import texture
 import EasySprite
 
 
-class Dialog():
+class Dialog:
     def __init__(self, coordinates, text=None, file_text=None, width=None):
         self.base_settings = {"id": 0, "font": "web_ibm_mda.ttf", "color": (255, 255, 255), "font_size": 18,
                               "twitch": 0, "time_appear": 0.05,"can_break": True, "break": False, "text": ""}

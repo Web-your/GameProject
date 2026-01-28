@@ -3,9 +3,9 @@ import EasySprite
 from EasyBlock import VisualBlock, TextureBlock
 
 HERO_TYPE_ICON_PATH_DICT = {
-    "attack" : "Fight_Mechanic/Static/Interface_Textures/attack_icon.png",
-    "defense": "Fight_Mechanic/Static/Interface_Textures/defense_icon.png",
-    "heal": "Fight_Mechanic/Static/Interface_Textures/heal_icon.png"
+    "attack" : "Fight_Mechanic/Static/Interface/actionIcon_1.png",
+    "defense": "Fight_Mechanic/Static/Interface/actionIcon_2.png",
+    "heal": "Fight_Mechanic/Static/Interface/actionIcon_3.png"
 }
 
 
@@ -134,7 +134,8 @@ class MiniGameInterface:
             self.hero_height = self.main_fon_plank.height - self.indent * 2
 
             self.types_lst = ["attack", "defense", "heal"]
-            self.heros_lst = []
+            self.hero_lst = []
+            self.hero_dict = {}
 
             for i in range(0, self.count_heros):
                 left = self.main_fon_plank.left + self.indent + i * (self.hero_width + self.indent)
@@ -144,10 +145,11 @@ class MiniGameInterface:
                 hero_type = self.types_lst[i]
 
                 hero = self.Hero(i, hero_type, cords, interface)
-                self.heros_lst.append(hero)
+                self.hero_dict[hero_type] = hero
+                self.hero_lst.append(hero)
 
         def draw(self):
-            for hero in self.heros_lst:
+            for hero in self.hero_lst:
                 hero.draw()
 
         class Hero:
@@ -182,12 +184,6 @@ class MiniGameInterface:
                 self.hero_fon_plank.draw()
                 self.icon.draw()
                 self.health_bar.draw()
-
-            class HeroNumber:
-                ...
-
-            class HeroText:
-                ...
 
             class HealthBar:
                 def __init__(

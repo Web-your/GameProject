@@ -11,6 +11,7 @@ from FlyArrowsMehanic.FlyArrows import setup_attack
 
 # Импортируем интерфейс для мини-боя
 from Fight_Mechanic.MiniGameDopObjects import MiniGameDopBox
+from Fight_Mechanic.Interface import Interface
 
 
 
@@ -32,9 +33,24 @@ TYPE_INDEX_DICT = {"menu": 0, "attack": 1, "defense": 2, "heal": 3}
 INDEX_TYPE_LIST = ["menu", "attack", "defense", "heal"]
 
 # API выбора
-# [{"hero_type": str (attack, defense, heal),
-# "action_type": str (main, support, item, mana),
-# "action_data": {"count": int, "support_hero": str, "attack_enemies": str, "item": class Item, "item_hero": str}}]
+""""
+{
+    "hero_type" - str (attack, defense, heal):
+    {
+        "action_type": str (main, support, item, mana),
+        "action_data": 
+        {
+            "count_mana": int,
+            "support_hero": str,
+            "attack_enemies": int,
+            "heal_hero": str,
+            "item": int,
+            "item_hero": str
+        }
+    } 
+    or None
+}
+"""
 
 # Динамические объекты
 # <-------------------------------------------------------------------------------------------------------------------
@@ -50,24 +66,29 @@ def menu_setup(scene_manager, *settings):
 class PhaseManager:
     def __init__(self, fb):
         self.fb = fb
-        self.mini_games_list = [3, 1, 3, 2]
-        self.support_list = []
-        self.curr_support = None
-        self.curr_enemies = None
-        self.used_items = []
         self.game_que = ["attack", "heal", "defense"]
+        self.mini_games_list = []
+        self.support_list = []
+        self.used_items = []
+
+        self.curr_support = None
+        self.curr_hero = None
 
     def data_handler(self, data):
-        for i, hero in enumerate(data):
-            h_type, a_type, a_data = hero.values()
+        print("phase_manager", data)
+
+        for h_type, h_data in data.items():
+            a_type, a_data = h_data.values()
 
             if a_type == "mana":
-                self.fb.count_mana += a_data["count"]
+                self.fb.count_mana += a_data["count_mana"]
 
             elif a_type == "main":
                 self.mini_games_list.append(TYPE_INDEX_DICT[h_type])
                 if h_type == "attack":
-                    self.curr_enemies = a_data["attack_enemies"]
+                    self.fb.attack_hero.curr_enemies = a_data["attack_enemies"]
+                elif h_type == "heal":
+                    self.fb.heal_hero.curr_heal_hero = a_data["heal_hero"]
 
             elif a_type == "support":
                 self.support_list.append(TYPE_INDEX_DICT[a_data["support_hero"]])
@@ -75,26 +96,37 @@ class PhaseManager:
             elif a_type == "item":
                 self.used_items.append([a_data["item"], a_data["item_hero"]])
 
-        self.fb.scene_manager.next_scene()
+        if len(self.mini_games_list) != 0:
+            self.fb.scene_manager.next_scene_index = 0
+            self.fb.scene_manager.curr_scene_index = self.mini_games_list[0]
+            self.fb.scene_manager.next_scene()
+
+        else:
+            self.update()
 
     def update(self):
-        # all_heros_update()
-        # enemies_update()
-        # items_update()
-        # mana_update
+        self.fb.attack_hero.curr_enemies = None
+        self.fb.heal_hero.curr_heal_hero = None
+        self.curr_support = None
+        self.curr_hero = None
 
-        self.curr_support = None
-        self.curr_support = None
-        self.mini_games_list = [3, 1, 3, 2]
+        self.mini_games_list = []
         self.support_list = []
         self.used_items = []
 
     def temporary_updates(self):
         next_scene_index = self.fb.scene_manager.curr_scene_index
-        hero = self.fb.hero_list.type_hero_dict[INDEX_TYPE_LIST[next_scene_index]]
+        self.curr_hero = self.fb.hero_dict[INDEX_TYPE_LIST[next_scene_index]]
 
-        if next_scene_index in self.support_list:
-            self.curr_support = INDEX_TYPE_LIST[next_scene_index]
+        # if next_scene_index in self.support_list:
+        #     self.curr_support = INDEX_TYPE_LIST[next_scene_index]
+        #     self.curr_hero.activate_support()
+        #
+        # for i_name, t_hero in self.used_items:
+        #     item = self.fb.items_dict[i_name]
+        #     i_hero = self.fb.hero_dict[t_hero]
+        #
+        #     del self.fb.items_dict[i_name]
 
 
 class SceneManager:
@@ -168,18 +200,14 @@ class MenuView(arcade.View):
         fb.interface.draw()
 
     def on_key_press(self, key, modifiers):
+        self.fight_box.interface.on_key_press(key, modifiers)
+
         if key == arcade.key.KEY_1:
             self.to_attack()
         elif key == arcade.key.KEY_2:
             self.to_defender()
         elif key == arcade.key.KEY_3:
             self.to_heal()
-
-    def on_mouse_motion(self, x, y, dx, dy):
-        self.fight_box.interface.mouse_motion(x, y, dx, dy)
-
-    def on_mouse_press(self, x, y, button, modifiers):
-        self.fight_box.interface.mouse_press(x, y, button, modifiers)
 
     def to_attack(self):
         self.scene_manager = self.fight_box.scene_manager
@@ -211,354 +239,111 @@ class Background:
         ...
 
 
-# Интерфейс, кнопки выбора действия, аура - отрисовка и механика
-class Interface:
-    def __init__(self, fight_box):
-        self.fight_box = fight_box
-        self.window = fight_box.window
-
-        self.panel_color = arcade.color.WHITE_SMOKE
-        self.small_panel_color = arcade.color.LIGHT_GRAY
-
-        self.main_panel_width = MAIN_PANEL_WIDTH
-        self.main_panel_height = MAIN_PANEL_HEIGHT
-        self.small_panel_width = 180
-        self.small_panel_height = 40
-
-        self.main_panel_x = fight_box.width // 2
-        self.main_panel_y = MAIN_PANEL_HEIGHT // 2 + 50
-
-        self.small_panel_x = self.main_panel_x - self.main_panel_width / 2 + self.small_panel_width / 2
-        self.small_panel_y = self.main_panel_y + self.main_panel_height / 2 + self.small_panel_height / 2
-
-        self.buttons_list = arcade.SpriteList()
-        self.zones_list = arcade.SpriteList()
-        self.icons_list = arcade.SpriteList()
-
-        self.textures = {}
-        self.load_textures()
-
-        self.create_interface()
-
-    def load_textures(self):
-        texture_info = {
-            'ATK_icon': {
-                'normal': 'Fight_Mechanic/Static/Interface_Textures/ATK_icon.png',
-                'active': 'Fight_Mechanic/Static/Interface_Textures/ATK_act_icon.png',
-                'color': arcade.color.RED
-            },
-            'DEF_icon': {
-                'normal': 'Fight_Mechanic/Static/Interface_Textures/DEF_icon.png',
-                'active': 'Fight_Mechanic/Static/Interface_Textures/DEF_act_icon.png',
-                'color': arcade.color.BLUE
-            },
-            'HEAL_icon': {
-                'normal': 'Fight_Mechanic/Static/Interface_Textures/HEAL_icon.png',
-                'active': 'Fight_Mechanic/Static/Interface_Textures/HEAL_act_icon.png',
-                'color': arcade.color.GREEN
-            },
-            'ITEM_icon': {
-                'normal': 'Fight_Mechanic/Static/Interface_Textures/ITEM_icon.png',
-                'active': 'Fight_Mechanic/Static/Interface_Textures/ITEM_act_icon.png',
-                'color': arcade.color.PURPLE
-            },
-            'something_icon': {
-                'normal': 'Fight_Mechanic/Static/Interface_Textures/something_icon.png',
-                'active': 'Fight_Mechanic/Static/Interface_Textures/something_act_icon.png',
-                'color': arcade.color.ORANGE
-            },
-            'icon_circle': {
-                'normal': None,
-                'active': None,
-                'color': arcade.color.DARK_BLUE
-            }
-        }
-
-        for name, info in texture_info.items():
-            try:
-                if info['normal']:
-                    self.textures[name] = arcade.load_texture(info['normal'])
-                else:
-                    self.textures[name] = None
-            except:
-                self.textures[name] = None
-                print(f"Текстура {info['normal']} не загружена")
-
-            try:
-                if info['active']:
-                    self.textures[name + '_active'] = arcade.load_texture(info['active'])
-                else:
-                    self.textures[name + '_active'] = None
-            except:
-                self.textures[name + '_active'] = None
-                print(f"Активная текстура {info['active']} не загружена")
-
-            self.textures[name + '_color'] = info['color']
-            self.textures[name + '_color_active'] = (
-                max(0, info['color'][0] - 50),
-                max(0, info['color'][1] - 50),
-                max(0, info['color'][2] - 50)
-            )
-
-    def create_button_sprite(self, x, y, texture_name, width, height):
-        normal_texture = self.textures.get(texture_name)
-        active_texture = self.textures.get(texture_name + '_active')
-        normal_color = self.textures.get(texture_name + '_color', arcade.color.LIGHT_GRAY)
-        active_color = self.textures.get(texture_name + '_color_active', arcade.color.GRAY)
-
-        if normal_texture:
-            sprite = arcade.Sprite()
-            sprite.texture = normal_texture
-
-            scale_x = width / sprite.width
-            scale_y = height / sprite.height
-            sprite.scale = min(scale_x, scale_y)
-
-            sprite.normal_texture = normal_texture
-            sprite.active_texture = active_texture
-        else:
-            sprite = arcade.SpriteSolidColor(width, height, normal_color)
-            sprite.normal_texture = None
-            sprite.active_texture = None
-
-        sprite.center_x = x
-        sprite.center_y = y
-
-        sprite.texture_name = texture_name
-        sprite.normal_color = normal_color
-        sprite.active_color = active_color
-        sprite.is_hovered = False
-
-        return sprite
-
-    def create_interface(self):
-        zone_width = (self.main_panel_width - PANEL_MARGIN * 4) // 3 - 60
-        zone_height = self.main_panel_height - 120
-
-        for i in range(3):
-            zone_x = (self.main_panel_x - self.main_panel_width / 2 + PANEL_MARGIN +
-                      zone_width // 2 + i * (zone_width + PANEL_MARGIN) + 20 * i + 40)
-            zone_y = self.main_panel_y - 15
-
-            zone_color = None
-            if i == 0:
-                zone_color = arcade.color.LIGHT_BLUE
-            elif i == 1:
-                zone_color = arcade.color.LIGHT_YELLOW
-            else:
-                zone_color = arcade.color.LIGHT_GREEN
-
-            zone_sprite = arcade.SpriteSolidColor(zone_width, zone_height, zone_color)
-            zone_sprite.center_x = zone_x
-            zone_sprite.center_y = zone_y
-            zone_sprite.sprite_type = "zone"
-            zone_sprite.zone_index = i
-            self.zones_list.append(zone_sprite)
-
-            icon_x = zone_x - zone_width / 2 + 25
-            icon_y = zone_y
-
-            icon_sprite = arcade.SpriteSolidColor(24, 24, arcade.color.DARK_BLUE)
-            icon_sprite.center_x = icon_x
-            icon_sprite.center_y = icon_y
-            icon_sprite.sprite_type = "icon"
-            icon_sprite.zone_index = i
-            self.icons_list.append(icon_sprite)
-
-            for j in range(3):
-                button_x = icon_x + 35 + j * (BUTTON_WIDTH + ELEMENT_MARGIN) + BUTTON_WIDTH / 2
-                button_y = zone_y
-
-                texture_name = None
-
-                if j == 0:
-                    if i == 0:
-                        texture_name = 'ATK_icon'
-                    elif i == 1:
-                        texture_name = 'DEF_icon'
-                    elif i == 2:
-                        texture_name = 'HEAL_icon'
-                elif j == 1:
-                    texture_name = 'ITEM_icon'
-                elif j == 2:
-                    texture_name = 'something_icon'
-
-                # Создаем кнопку-спрайт
-                button_sprite = self.create_button_sprite(
-                    button_x,
-                    button_y,
-                    texture_name,
-                    BUTTON_WIDTH,
-                    BUTTON_HEIGHT
-                )
-
-                button_sprite.button_type = texture_name
-                button_sprite.zone_index = i
-                button_sprite.button_index = j
-
-                self.buttons_list.append(button_sprite)
-
-    def update_button_texture(self, button, is_hovered):
-        if is_hovered != button.is_hovered:
-            button.is_hovered = is_hovered
-
-            if button.normal_texture:
-                if is_hovered and button.active_texture:
-                    button.texture = button.active_texture
-                else:
-                    button.texture = button.normal_texture
-            else:
-                if is_hovered:
-                    button.color = button.active_color
-                else:
-                    button.color = button.normal_color
-
-    def draw(self):
-        main_panel_rect = arcade.LRBT(
-            left=self.main_panel_x - self.main_panel_width / 2,
-            right=self.main_panel_x + self.main_panel_width / 2,
-            bottom=self.main_panel_y - self.main_panel_height / 2,
-            top=self.main_panel_y + self.main_panel_height / 2
-        )
-        arcade.draw_rect_filled(main_panel_rect, self.panel_color)
-        arcade.draw_rect_outline(main_panel_rect, arcade.color.BLACK, 2)
-
-        small_panel_rect = arcade.LRBT(
-            left=self.main_panel_x - self.main_panel_width / 2,
-            right=self.main_panel_x - self.main_panel_width / 2 + self.small_panel_width,
-            bottom=self.main_panel_y + self.main_panel_height / 2,
-            top=self.main_panel_y + self.main_panel_height / 2 + self.small_panel_height
-        )
-        arcade.draw_rect_filled(small_panel_rect, self.small_panel_color)
-        arcade.draw_rect_outline(small_panel_rect, arcade.color.BLACK, 2)
-
-        connection_rect = arcade.LRBT(
-            left=self.main_panel_x - self.main_panel_width / 2,
-            right=self.main_panel_x - self.main_panel_width / 2 + self.small_panel_width,
-            bottom=self.main_panel_y + self.main_panel_height / 2,
-            top=self.main_panel_y + self.main_panel_height / 2 + 2
-        )
-        arcade.draw_rect_filled(connection_rect, arcade.color.DARK_GRAY)
-
-        self.zones_list.draw()
-
-        for zone in self.zones_list:
-            arcade.draw_rect_outline(
-                arcade.LRBT(
-                    left=zone.center_x - zone.width / 2,
-                    right=zone.center_x + zone.width / 2,
-                    bottom=zone.center_y - zone.height / 2,
-                    top=zone.center_y + zone.height / 2
-                ),
-                arcade.color.BLACK,
-                1
-            )
-
-        self.icons_list.draw()
-
-        for i, icon in enumerate(self.icons_list):
-            arcade.draw_text(
-                str(i + 1),
-                icon.center_x,
-                icon.center_y,
-                arcade.color.WHITE,
-                12,
-                anchor_x="center",
-                anchor_y="center",
-                bold=True
-            )
-
-        self.buttons_list.draw()
-
-        for button in self.buttons_list:
-            has_texture = button.normal_texture is not None
-
-            if not has_texture:
-                text = ""
-                if button.button_index == 0:
-                    if button.zone_index == 0:
-                        text = "ATK"
-                    elif button.zone_index == 1:
-                        text = "DEF"
-                    elif button.zone_index == 2:
-                        text = "HEAL"
-                elif button.button_index == 1:
-                    text = "ITEM"
-                elif button.button_index == 2:
-                    text = "???"
-
-                arcade.draw_text(
-                    text,
-                    button.center_x,
-                    button.center_y,
-                    arcade.color.BLACK,
-                    10,
-                    anchor_x="center",
-                    anchor_y="center",
-                    bold=True
-                )
-
-    def mouse_motion(self, x, y, dx, dy):
-        for button in self.buttons_list:
-            left = button.center_x - button.width / 2
-            right = button.center_x + button.width / 2
-            bottom = button.center_y - button.height / 2
-            top = button.center_y + button.height / 2
-
-            is_hovered = (left <= x <= right and bottom <= y <= top)
-
-            self.update_button_texture(button, is_hovered)
-
-    def mouse_press(self, x, y, button, modifiers):
-        if button == arcade.MOUSE_BUTTON_LEFT:
-            for btn in self.buttons_list:
-                left = btn.center_x - btn.width / 2
-                right = btn.center_x + btn.width / 2
-                bottom = btn.center_y - btn.height / 2
-                top = btn.center_y + btn.height / 2
-
-                if left <= x <= right and bottom <= y <= top:
-                    zone_idx = btn.zone_index
-                    btn_idx = btn.button_index
-                    btn_type = btn.button_type
-
-                    print(f"Нажата кнопка: Зона {zone_idx + 1}, Кнопка {btn_idx + 1} ({btn_type})")
-
-                    return
-
-
+# Типы эффектов: +-attack, +-health, health_all
 class Item:
-    ...
+    def __init__(self, fb):
+        self.fb = fb
+
+        self.description = "Предмет"
+        self.name = "item"
+        self.effects = []
 
 
 class Enemies:
-    def __init__(self, fb):
+    def __init__(self, fb, *settings):
         self.fb = fb
         self.health = 1
 
+
+# Персонажи
+# <-------------------------------------------------------------------------------------------------------------------
 
 # Герой
 class Hero:
-    def __init__(self, h_type):
+    def __init__(self, fb, h_type):
+        self.fb = fb
+        self.mg_hero_dict = self.fb.mg_box.interface.hero_list.hero_dict
+
         self.type = h_type
         self.health = 1
 
+    def lose_health(self, main_lose_health):
+        self.health -= main_lose_health
 
-# Список героев
-class HeroList:
+        mg_hero = self.mg_hero_dict[self.type]
+        mg_hero.health_bar.update(self.health)
+
+        mg_hero.hero_fon_plank.pulse_frame(arcade.color.RED)
+
+    def activate_support(self):
+        pass
+
+
+class AttackHero(Hero):
     def __init__(self, fb):
-        self.fb = fb
-        self.type_hero_dict = {
-            "attack": Hero("attack"),
-            "defense": Hero("defense"),
-            "heal": Hero("heal")
-        }
-    
-    def get_hero(self, h_type):
-        return self.type_hero_dict[h_type]
+        super().__init__(fb, "attack")
 
-    def get_hero_list(self):
-        return list(self.type_hero_dict.values())
+        self.curr_enemies = None
+        self.damage_boost = 0
+
+    def hit_damage(self, main_damage):
+        self.curr_enemies.health -= main_damage + self.damage_boost
+
+    def activate_support(self):
+        self.damage_boost = 10
+
+    def stop_support(self):
+        self.damage_boost = 0
+
+
+class DefenseHero(Hero):
+    def __init__(self, fb):
+        super().__init__(fb, "attack")
+        self.lose_health_boost = 0
+
+    def lose_health(self, main_lose_health):
+        hero = random.choice(self.fb.hero_list)
+        hero.health -= main_lose_health + self.lose_health_boost
+
+        mg_hero = self.mg_hero_dict[hero.type]
+        mg_hero.health_bar.update(hero.health)
+
+        mg_hero.hero_fon_plank.pulse_frame(arcade.color.RED)
+
+    @staticmethod
+    def raise_mana(main_raise_mana):
+        mana = ...
+        mana.count += main_raise_mana
+
+    def activate_support(self):
+        self.lose_health_boost = -10
+
+    def stop_support(self):
+        self.lose_health_boost = 0
+
+
+class HealHero(Hero):
+    def __init__(self, fb):
+        super().__init__(fb, "attack")
+
+        self.heal_hero = None
+        self.heal_boost = 0
+
+    def heal(self, main_heal_health):
+        self.heal_hero.health += main_heal_health + self.heal_boost
+        if self.heal_hero.health > 1:
+            self.heal_hero.health = 1
+
+        mg_hero = self.mg_hero_dict[self.heal_hero.type]
+        mg_hero.health_bar.update(self.heal_hero.health)
+
+        mg_hero.hero_fon_plank.pulse_frame(arcade.color.GREEN)
+
+    def activate_support(self):
+        self.heal_boost = 10
+
+    def stop_support(self):
+        self.heal_boost = 0
 
 
 
@@ -582,11 +367,20 @@ class FightBox:
 
         self.count_mana = 0
 
-        # Создание системных героев
-        self.hero_list = HeroList(self)
-        self.attack_hero = self.hero_list.get_hero("attack")
-        self.defense_hero = self.hero_list.get_hero("defense")
-        self.heal_hero = self.hero_list.get_hero("heal")
+        # Создание системных персонажей
+        self.attack_hero = AttackHero(self)
+        self.defense_hero = DefenseHero(self)
+        self.heal_hero = HealHero(self)
+
+        self.hero_dict = {
+            "attack": self.attack_hero,
+            "defense": self.defense_hero,
+            "heal": self.heal_hero
+        }
+        self.hero_list = list(self.hero_dict.values())
+
+        self.enemies_list = [Enemies(self), Enemies(self)]
+        self.items_dict = {Item(self), Item(self)}
 
         self.interface = Interface(self)  # Интерфейс
 
@@ -596,24 +390,22 @@ class FightBox:
 
         self.scene_manager.setup()
 
-    def lose_health(self, health_lose):
-        scene_index = self.scene_manager.curr_scene_index
-        if scene_index == 2:
-            hero = random.choice(self.hero_list.get_hero_list())
-            if self.phase_manager.curr_support == 2:
-                health_lose *= 3/4
-        else:
-            hero = self.hero_list.get_hero(INDEX_TYPE_LIST[scene_index])
+    def lose_health(self, main_health_lose):
+        self.phase_manager.curr_hero.lose_health(main_health_lose)
 
-        hero.health -= health_lose
-
-    def attack_enemies(self, damage_attack):
-        scene_index = self.scene_manager.curr_scene_index
-        if self.phase_manager.curr_support == 1:
-            damage_attack *= 5/4
+    def attack_enemies(self, main_damage):
+        # self.phase_manager.curr_hero
+        ...
 
     def heal(self, health_heal):
-        ...
+        if self.phase_manager.curr_support == 3:
+            health_heal *= 5/4
+
+        heal_hero = self.hero_dict[self.phase_manager.curr_heal_hero]
+        health_heal.health += health_heal
+
+        if health_heal.health > 1:
+            heal_hero.health = 1
 
 
 # Функция для запуска общей битвы
