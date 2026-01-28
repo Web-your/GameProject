@@ -1,4 +1,4 @@
-""" Name: Максим | Date: 07.01.2026 | WhatYouDo: Обновил код для совместимости с основным боем """
+""" Name: Максим | Date: 27.01.2026 | WhatYouDo: очинил расположение палочек(написав 6 символов ._.) """
 # Name: Иван, Date: 08.01.2026, WhatYouDo: Добавил функцию setup_heal для запуска мини-боя лечения
 
 import arcade
@@ -31,7 +31,7 @@ class HealActThingy(arcade.Sprite):
         self.has_jumped_over_field = False
         self.jump_progress = 0
         self.jump_direction = 1
-        self.original_y = view.center_y
+        self.original_y = view.center_y + 120
         self.field_center_x = view.center_x
 
         # Определяем путь к текстурам относительно текущего файла
