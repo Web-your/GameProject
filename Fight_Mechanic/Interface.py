@@ -105,7 +105,7 @@ class Interface:
         self.ui_state = STATE_NORMAL  # Текущее состояние
 
         # Аура
-        self.aura = 10  # Текущее значение ауры
+        self.aura = 0  # Текущее значение ауры
         self.max_aura = 10  # Максимальное значение ауры
 
         # Данные о выборах

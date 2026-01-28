@@ -1,7 +1,5 @@
 # Name: Иван, Date: 08.01.2026, WhatYouDo: создал файл для реализации общей боёвки, определил структуру кода
 # Name: Иван и Макс, Date: 08.01.2026, WhatYouDo: добавили интерфейс
-from copy import copy
-
 import arcade
 import random
 
@@ -68,8 +66,12 @@ def menu_setup(scene_manager, *settings):
 class PhaseManager:
     def __init__(self, fb):
         self.fb = fb
+
         self.game_que = ["attack", "heal", "defense"]
         self.mini_games_list = []
+
+        self.phase_count = 1
+        self.max_phase_count = 20
 
         self.curr_hero = None
 
@@ -119,6 +121,10 @@ class PhaseManager:
             hero.stop_support()
         self.curr_hero = None
         self.mini_games_list = []
+
+        self.phase_count += 1
+        if self.phase_count > self.max_phase_count:
+            ...
 
     def temporary_updates(self):
         self.fb.interface.update_aura_point_sprites()
@@ -397,7 +403,7 @@ class FightBox:
 
         self.back_persons = BackPersBox(self)
 
-        self.count_mana = 10
+        self.count_mana = 0
 
         # Создание системных персонажей
         self.attack_hero = AttackHero(self)
@@ -420,6 +426,9 @@ class FightBox:
         self.phase_manager = PhaseManager(self) # Менеджер фаз
         self.menu_view = MenuView(self)  # Окно отрисовки меню
 
+        fon_music = arcade.load_sound("Fight_Mechanic/Static/Sounds/fon_fight_music.mp3")
+        self.fon_music_player = arcade.play_sound(fon_music, 0.25, loop=True)
+
         self.scene_manager.setup()
 
 
@@ -430,6 +439,8 @@ def setup_fight(main_scene_manager, *settings):
 
 # Функция для остановки общей битвы
 def stop_fight(fight_box):
+    fight_box.fon_music_player.stop()
+
     main_scene_manager = fight_box.main_scene_manager
     # Вносим изменения в main_scene_manager ...
     del fight_box

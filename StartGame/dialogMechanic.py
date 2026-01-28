@@ -13,9 +13,9 @@ from pyglet.resource import texture
 import EasySprite
 
 
-class Dialog():
+class Dialog:
     def __init__(self, coordinates, text=None, file_text=None, width=None):
-        self.base_settings = {"id": 0, "font": "web_ibm_mda.ttf", "color": (255, 255, 255), "font_size": 18,
+        self.base_settings = {"id": 0, "font": "StartGame/web_ibm_mda.ttf", "color": (255, 255, 255), "font_size": 18,
                               "twitch": 0, "time_appear": 0.05,"can_break": True, "break": False, "text": ""}
         self.x = coordinates[0]
         self.y = coordinates[1]
@@ -161,15 +161,15 @@ class Dialog():
         for item in self.visable_text:
             item.draw()
 
-class Button():
+class Button:
     def __init__(self, x, y, width, height, text="", font=None, font_size=None, color=None, color_act=None, line_width=None, line_width_act=None):
         self.state_act = False
         self.button_state = False
         self.box_button = (x, y, width, height)
         self.options_button = {'text': "","font": "", "font_size": 18, "color": (255, 255, 255),
                                "color_act": (255, 255, 255), "line_width": 2, "line_width_act": 2}
-        pyglet.font.add_file("web_ibm_mda.ttf")
-        font_prop = fm.FontProperties(fname="web_ibm_mda.ttf")
+        pyglet.font.add_file("StartGame/web_ibm_mda.ttf")
+        font_prop = fm.FontProperties(fname="StartGame/web_ibm_mda.ttf")
         self.options_button["font"] = font_prop.get_name()
         if text != "":
             self.set_text(text)
@@ -269,7 +269,7 @@ class Button():
             )
             text.draw()
 
-class ButtonGroup():
+class ButtonGroup:
     def __init__(self, *elements, division="all"):
         division_dict = {"all": 0, "left-right": 1, "up-down": 2}
         self.buttons = np.array(elements)
@@ -338,17 +338,18 @@ SCREEN_HEIGHT = 600
 SCREEN_TITLE = "Alfa.Ver01"
 MENU_STATE = 0
 
-class StartMenu(arcade.Window):
-    def __init__(self, width, height, title, side, color):
-        super().__init__(width, height, title)
-        self.width = width
-        self.height = height
+class StartMenu(arcade.View):
+    def __init__(self, main_scene_manager):
+        super().__init__()
+        self.main_scene_manager = main_scene_manager
+
         self.keys = set()
         self.menu_state = MENU_STATE
-        pyglet.font.add_file("pixcyr2.ttf")
+        pyglet.font.add_file("StartGame/pixcyr2.ttf")
 
+        self.setup2()
 
-    def setup(self):  # Список списков координат квадратов для рисования
+    def setup2(self):  # Список списков координат квадратов для рисования
         self.dialog = Dialog((100, 80), file_text="StartGame/hernia.txt", width=300)
         self.dialog.base_settings["time_appear"] = 0.1
         self.dialog.base_settings["color"] = (183,120,56)
@@ -359,12 +360,12 @@ class StartMenu(arcade.Window):
         self.button_new_game = Button(self.width // 2, self.height // 6 * 3, 200, 60, text="Новая игра", line_width_act=4)
         self.group_button = ButtonGroup(self.button_new_game, self.button_options, division="up-down")
 
-        image = arcade.Sprite(EasySprite.load_texture("Start.png", 3.5))
+        image = arcade.Sprite(EasySprite.load_texture("StartGame/Start.png", 3.5))
         image.center_x = self.width // 2
         image.center_y = self.height // 3 * 1.8
         self.story_sprits = arcade.SpriteList()
         self.story_sprits.append(image)
-        font_prop = fm.FontProperties(fname="pixcyr2.ttf")
+        font_prop = fm.FontProperties(fname="StartGame/pixcyr2.ttf")
         self.text_press = arcade.Text(
             text="press enter",
             x=self.width // 2 - 80,
@@ -405,19 +406,9 @@ class StartMenu(arcade.Window):
             self.menu_state += 1
 
         if self.button_new_game.button_state:
+            self.main_scene_manager.next_scene()
             print("StartGame")
 
 
-def setup_game(width=900, height=600, title="Flying squares", side=100, color="#ff40ff"):
-    game = StartMenu(width, height, title, side, color)
-    game.setup()
-    return game
-
-
-def main():
-    setup_game(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
-    arcade.run()
-
-
-if __name__ == "__main__":
-    main()
+def setup_menu(main_scene_manager):
+    main_scene_manager.window.show_view(StartMenu(main_scene_manager))
