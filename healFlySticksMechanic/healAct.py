@@ -142,8 +142,8 @@ class HealTestView(arcade.View):
     def __init__(self, main_scene_manager, target_hero_index=0, parent_view=None):
         super().__init__()
         self.main_scene_manager = main_scene_manager
-        self.f_box = main_scene_manager.fb
-        self.mg_box = self.f_box.mg_box
+        self.fb = main_scene_manager.fb
+        self.mg_box = self.fb.mg_box
         self.mini_window = self.mg_box.mini_window
 
         # Параметры мини-окна
@@ -309,6 +309,8 @@ class HealTestView(arcade.View):
 
         self.mg_box.draw()
 
+        self.fb.back_persons.draw()
+
     # Удаление лишних палок
     def clean_inactive_sticks(self):
         sticks_to_remove = []
@@ -337,6 +339,8 @@ class HealTestView(arcade.View):
             self.on_complete_callback(self.target_hero_index, success_rate, self.success_count)
 
     def on_update(self, delta_time):
+        self.fb.back_persons.update(delta_time)
+
         # Если таймер закрытия активен
         if self.should_close:
             self.close_timer -= delta_time
@@ -404,6 +408,7 @@ class HealTestView(arcade.View):
                                 stick.was_hit = True
                                 self.success_count += 1
                                 arcade.play_sound(self.hit_sound)
+                                self.fb.attack_hero.hit_damage(0.05)
                             stick.active = False
                             break
 

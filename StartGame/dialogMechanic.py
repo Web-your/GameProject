@@ -349,7 +349,7 @@ class StartMenu(arcade.Window):
 
 
     def setup(self):  # Список списков координат квадратов для рисования
-        self.dialog = Dialog((100, 80), file_text=r"C:\Users\Mi\PycharmProjects\Learn\hernia.txt", width=300)
+        self.dialog = Dialog((100, 80), file_text="StartGame/hernia.txt", width=300)
         self.dialog.base_settings["time_appear"] = 0.1
         self.dialog.base_settings["color"] = (183,120,56)
         self.dialog.base_settings["font_size"] = 22

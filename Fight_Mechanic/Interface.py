@@ -105,7 +105,7 @@ class Interface:
         self.ui_state = STATE_NORMAL  # Текущее состояние
 
         # Аура
-        self.aura = 0  # Текущее значение ауры
+        self.aura = 10  # Текущее значение ауры
         self.max_aura = 10  # Максимальное значение ауры
 
         # Данные о выборах
@@ -1068,7 +1068,7 @@ class Interface:
             if self.curr_hero == "attack":
                 if selected_item['text'][:-2] == 'Враг':
                     self.curr_choice["action_type"] = "main"
-                    self.curr_choice["action_data"]["attack_enemies"] = int(self.current_selection_type[-1]) - 1
+                    self.curr_choice["action_data"]["attack_enemies"] = int(selected_item['text'][-1]) - 1
                 elif selected_item['text'][:-2] == 'Персонаж':
                     self.curr_choice["action_type"] = "support"
                     support_hero_index = int(selected_item['text'][-1]) - 1
@@ -1091,7 +1091,7 @@ class Interface:
                 if selected_item['text'][:-2] == 'Пациент':
                     self.curr_choice["action_type"] = "main"
                     self.curr_choice["action_data"]["heal_hero"] = self.hero_type_list[
-                        int(self.current_selection_type[-1]) - 1
+                        int(selected_item['text'][-1]) - 1
                     ]
                 elif selected_item['text'][:-2] == 'Персонаж':
                     support_hero_index = int(selected_item['text'][-1]) - 1
@@ -1264,7 +1264,7 @@ class Interface:
     def add_aura(self):
         self.aura += 1
         if self.aura > self.max_aura:
-            self.aura = 0
+            self.aura = 10
         print(f"Аура: {self.aura}/{self.max_aura}")
         # Обновляем спрайты точек ауры при изменении уровня маны
         self.update_aura_point_sprites()

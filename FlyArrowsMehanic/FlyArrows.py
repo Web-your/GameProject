@@ -9,9 +9,9 @@ class AttackView(arcade.View):
     def __init__(self, main_scene_manager):
         super().__init__()
         self.main_scene_manager = main_scene_manager
-        self.fight_box = main_scene_manager.fb
+        self.fb = main_scene_manager.fb
 
-        self.mg_box = self.fight_box.mg_box
+        self.mg_box = self.fb.mg_box
         self.mini_window = self.mg_box.mini_window
 
         arcade.set_background_color(arcade.color.BLACK)
@@ -77,7 +77,6 @@ class AttackView(arcade.View):
     def on_draw(self):
         """Этот метод отвечает за отрисовку содержимого окна"""
         self.clear()
-        fb = self.fight_box
 
         self.all_arrow_sprites.draw()
         arcade.draw_lbwh_rectangle_filled(self.mini_window.x, 0, self.mini_window.width, self.mini_window.y,
@@ -91,9 +90,12 @@ class AttackView(arcade.View):
         self.all_sprites.draw()
 
         self.mg_box.draw()
+        self.fb.back_persons.draw()
 
     def on_update(self, delta_time):
         """Этот метод отвечает за обновление логики игры (анимации, взаимодействия и т. д.)"""
+        self.fb.back_persons.update(delta_time)
+
         self.total_time += delta_time
 
         if self.total_time >= self.time_stop:
@@ -306,6 +308,7 @@ class AttackView(arcade.View):
 
     # Функция для выхода из мини-боя
     def stop(self):
+        self.fb.heal_hero.heal(self.count * 0.05)
         self.main_scene_manager.next_scene()
 
 

@@ -316,6 +316,8 @@ class WaveView(arcade.View):
         self.df.bullet_list.update(delta_time)
         self.df.aura_list.update(delta_time)
 
+        self.df.fight_box.back_persons.update(delta_time)
+
     def on_draw(self):
         self.clear()
         df = self.df
@@ -329,6 +331,8 @@ class WaveView(arcade.View):
 
         df.interface_camera.use()
         df.mg_box.draw()
+
+        df.fight_box.back_persons.draw()
 
     def on_key_press(self, key, modifiers):
         self.keys_pressed.add(key)
