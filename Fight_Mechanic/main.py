@@ -14,7 +14,6 @@ from Fight_Mechanic.MiniGameDopObjects import MiniGameDopBox
 from Fight_Mechanic.Interface import Interface
 
 
-
 # Константы для интерфейса
 MAIN_PANEL_WIDTH = 960
 MAIN_PANEL_HEIGHT = 200
@@ -68,15 +67,10 @@ class PhaseManager:
         self.fb = fb
         self.game_que = ["attack", "heal", "defense"]
         self.mini_games_list = []
-        self.support_list = []
-        self.used_items = []
 
-        self.curr_support = None
         self.curr_hero = None
 
     def data_handler(self, data):
-        print("phase_manager", data)
-
         for h_type, h_data in data.items():
             a_type, a_data = h_data.values()
 
@@ -91,10 +85,13 @@ class PhaseManager:
                     self.fb.heal_hero.curr_heal_hero = a_data["heal_hero"]
 
             elif a_type == "support":
-                self.support_list.append(TYPE_INDEX_DICT[a_data["support_hero"]])
+                self.fb.hero_dict[a_data["support_hero"]].add_support()
 
             elif a_type == "item":
-                self.used_items.append([a_data["item"], a_data["item_hero"]])
+                # item = self.fb.item_list[a_data["item"]]
+                item = self.fb.item_list[0]
+                item_hero = a_data["item_hero"]
+                item.use(item_hero)
 
         if len(self.mini_games_list) != 0:
             self.fb.scene_manager.next_scene_index = 0
@@ -105,28 +102,14 @@ class PhaseManager:
             self.update()
 
     def update(self):
-        self.fb.attack_hero.curr_enemies = None
-        self.fb.heal_hero.curr_heal_hero = None
-        self.curr_support = None
+        for hero in self.fb.hero_list:
+            hero.stop_support()
         self.curr_hero = None
-
         self.mini_games_list = []
-        self.support_list = []
-        self.used_items = []
 
     def temporary_updates(self):
         next_scene_index = self.fb.scene_manager.curr_scene_index
         self.curr_hero = self.fb.hero_dict[INDEX_TYPE_LIST[next_scene_index]]
-
-        # if next_scene_index in self.support_list:
-        #     self.curr_support = INDEX_TYPE_LIST[next_scene_index]
-        #     self.curr_hero.activate_support()
-        #
-        # for i_name, t_hero in self.used_items:
-        #     item = self.fb.items_dict[i_name]
-        #     i_hero = self.fb.hero_dict[t_hero]
-        #
-        #     del self.fb.items_dict[i_name]
 
 
 class SceneManager:
@@ -239,20 +222,45 @@ class Background:
         ...
 
 
-# Типы эффектов: +-attack, +-health, health_all
-class Item:
+class HealEffect:
     def __init__(self, fb):
         self.fb = fb
+        self.type = "heal"
+        self.heal_boost = 0.1
 
-        self.description = "Предмет"
-        self.name = "item"
-        self.effects = []
+    def use(self, h_type):
+        hero = self.fb.hero_dict[h_type]
+        hero.get_health(self.heal_boost)
+
+
+# Типы эффектов: +-attack, +-health, health_all
+class Item:
+    def __init__(self, fb, name="item", description="Предмет", effects=None):
+        self.fb = fb
+
+        self.name = name
+        self.description = description
+
+        if effects is None:
+            self.effects = []
+        else:
+            self.effects = effects
+
+    def use(self, h_type):
+        for effect in self.effects:
+            effect.use(h_type)
 
 
 class Enemies:
     def __init__(self, fb, *settings):
         self.fb = fb
         self.health = 1
+
+    def lose_health(self, main_lose_health):
+        self.health -= main_lose_health
+        if self.health < 0:
+            self.health = 0
+
 
 
 # Персонажи
@@ -269,13 +277,24 @@ class Hero:
 
     def lose_health(self, main_lose_health):
         self.health -= main_lose_health
-
+        if self.health < 0:
+            self.health = 0
         mg_hero = self.mg_hero_dict[self.type]
         mg_hero.health_bar.update(self.health)
+        mg_hero.hero_fon_plank.pulse_frame(color=arcade.color.RED, width=7)
 
-        mg_hero.hero_fon_plank.pulse_frame(arcade.color.RED)
+    def get_health(self, main_heal_health):
+        self.health += main_heal_health
+        if self.health > 1:
+            self.health = 1
+        mg_hero = self.mg_hero_dict[self.type]
+        mg_hero.health_bar.update(self.health)
+        mg_hero.hero_fon_plank.pulse_frame(arcade.color.GREEN)
 
-    def activate_support(self):
+    def add_support(self):
+        pass
+
+    def stop_support(self):
         pass
 
 
@@ -287,10 +306,11 @@ class AttackHero(Hero):
         self.damage_boost = 0
 
     def hit_damage(self, main_damage):
-        self.curr_enemies.health -= main_damage + self.damage_boost
+        damage = main_damage + self.damage_boost
+        self.curr_enemies.lose_health(damage)
 
-    def activate_support(self):
-        self.damage_boost = 10
+    def add_support(self):
+        self.damage_boost += 0.05
 
     def stop_support(self):
         self.damage_boost = 0
@@ -298,25 +318,22 @@ class AttackHero(Hero):
 
 class DefenseHero(Hero):
     def __init__(self, fb):
-        super().__init__(fb, "attack")
+        super().__init__(fb, "defense")
         self.lose_health_boost = 0
 
-    def lose_health(self, main_lose_health):
+    def special_lose_health(self, main_lose_health):
+        lose_health = main_lose_health + self.lose_health_boost
+        if lose_health < 0:
+            lose_health = 0
+
         hero = random.choice(self.fb.hero_list)
-        hero.health -= main_lose_health + self.lose_health_boost
+        hero.lose_health(lose_health)
 
-        mg_hero = self.mg_hero_dict[hero.type]
-        mg_hero.health_bar.update(hero.health)
+    def raise_mana(self, main_raise_mana):
+        self.fb.count_mana += main_raise_mana
 
-        mg_hero.hero_fon_plank.pulse_frame(arcade.color.RED)
-
-    @staticmethod
-    def raise_mana(main_raise_mana):
-        mana = ...
-        mana.count += main_raise_mana
-
-    def activate_support(self):
-        self.lose_health_boost = -10
+    def add_support(self):
+        self.lose_health_boost -= 0.05
 
     def stop_support(self):
         self.lose_health_boost = 0
@@ -324,23 +341,17 @@ class DefenseHero(Hero):
 
 class HealHero(Hero):
     def __init__(self, fb):
-        super().__init__(fb, "attack")
+        super().__init__(fb, "heal")
 
         self.heal_hero = None
         self.heal_boost = 0
 
     def heal(self, main_heal_health):
-        self.heal_hero.health += main_heal_health + self.heal_boost
-        if self.heal_hero.health > 1:
-            self.heal_hero.health = 1
+        heal_health = main_heal_health + self.heal_boost
+        self.heal_hero.get_health(heal_health)
 
-        mg_hero = self.mg_hero_dict[self.heal_hero.type]
-        mg_hero.health_bar.update(self.heal_hero.health)
-
-        mg_hero.hero_fon_plank.pulse_frame(arcade.color.GREEN)
-
-    def activate_support(self):
-        self.heal_boost = 10
+    def add_support(self):
+        self.heal_boost += 0.05
 
     def stop_support(self):
         self.heal_boost = 0
@@ -365,7 +376,7 @@ class FightBox:
         self.center_x = self.window.center_x
         self.center_y = self.window.center_y
 
-        self.count_mana = 0
+        self.count_mana = 10
 
         # Создание системных персонажей
         self.attack_hero = AttackHero(self)
@@ -380,7 +391,7 @@ class FightBox:
         self.hero_list = list(self.hero_dict.values())
 
         self.enemies_list = [Enemies(self), Enemies(self)]
-        self.items_dict = {Item(self), Item(self)}
+        self.item_list = [Item(self, name="heal_item", effects=[HealEffect(self)])]
 
         self.interface = Interface(self)  # Интерфейс
 

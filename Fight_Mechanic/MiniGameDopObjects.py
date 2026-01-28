@@ -14,10 +14,10 @@ class MiniWindow:
         window = mg_box.fb.window
 
         # Параметры окна
-        self.width = 10 * 70
-        self.height = 10 * 70
+        self.width = 9 * 70
+        self.height = 9 * 70
 
-        self.bottom = mg_box.interface.main_height + 50
+        self.bottom = mg_box.interface.main_height + 20
 
         self.center_x = window.center_x
         self.center_y = self.bottom + self.height // 2
@@ -177,7 +177,7 @@ class MiniGameInterface:
                     self.hero_fon_plank.center_y,
                     self,
                     width=self.hero_fon_plank.right - self.icon.right - self.indent * 2,
-                    health_factor=0.7
+                    health_factor=1
                 )
 
             def draw(self):

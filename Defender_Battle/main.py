@@ -423,8 +423,8 @@ class Board:
         self.cell_size = 70
 
         # Размеры поля в клетках
-        self.width = 10
-        self.height = 10
+        self.width = 9
+        self.height = 9
 
         # Настройки цветов
         self.frame_color = (255, 50, 0, 100)
@@ -572,7 +572,7 @@ class Bullet(arcade.Sprite):
         self.df = defender
 
         # Сколько урона нанесено игроку от 1 пули
-        self.health_lose_boost = 0.5
+        self.health_lose_boost = 0.1
 
         self.board = defender.board
         self.player = defender.player
@@ -607,6 +607,7 @@ class Bullet(arcade.Sprite):
 
     def update(self, delta_time):
         self.move_to_player(delta_time)
+        self.check_for_collision()
         # if not self.df.is_wave_active:
         #     self.speed = 400
         #     self.move_forward(delta_time)
@@ -617,13 +618,12 @@ class Bullet(arcade.Sprite):
     def check_for_collision(self):
         if arcade.check_for_collision(self, self.player):
             if not self.player.is_shield:
-                # self.background.start_pulse()
                 damage_sound = arcade.load_sound("Defender_Battle/Static/Sounds/get_damage.wav")
-                arcade.play_sound(damage_sound, 0)
-                self.df.health_lose += self.health_lose_boost
+                arcade.play_sound(damage_sound, 1)
+                self.df.fight_box.defense_hero.special_lose_health(self.health_lose_boost)
             else:
                 hit_sound = arcade.load_sound("Defender_Battle/Static/Sounds/hit_bullet_from_shield.wav")
-                arcade.play_sound(hit_sound, 0)
+                arcade.play_sound(hit_sound, 0.5)
             self.remove_from_sprite_lists()
 
     def move_forward(self, delta_time):
@@ -631,7 +631,6 @@ class Bullet(arcade.Sprite):
         self.center_x += self.speed * dx * delta_time
         self.center_y += self.speed * dy * delta_time
 
-        is_outside = False
         if self.spawn_place == "top":
             is_outside = self.center_y < self.df.bottom - self.indent
         elif self.spawn_place == "bottom":
@@ -643,7 +642,6 @@ class Bullet(arcade.Sprite):
 
         if is_outside:
             self.remove_from_sprite_lists()
-            print(self.spawn_place)
 
     def move_to_player(self, delta_time):
         plx = self.player.center_x
@@ -695,9 +693,11 @@ class AuraPoint(arcade.Sprite):
                 if not self.is_moved:
                     if arcade.check_for_collision(self, self.df.player):
                         cristal_sound = arcade.load_sound("Defender_Battle/Static/Sounds/get_cristal.wav")
-                        arcade.play_sound(cristal_sound, 0)
+                        arcade.play_sound(cristal_sound, 0.25)
                         self.df.damage_attack += self.damage_attack_boost
                         self.is_moved = True
+
+                        self.df.fight_box.defense_hero.raise_mana(1)
             else:
                 self.remove_from_sprite_lists()
 

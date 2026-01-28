@@ -17,7 +17,7 @@ class VisualBlock:
             show_frame: bool = True,
             show_pulse_fon: bool = True,
             show_pulse_frame: bool = True,
-            base_pulse_time: float = 0.5,
+            base_pulse_time: float = 1,
             creation_type: str = "XYWH"
     ):
         creation_type = creation_type.upper()
@@ -89,9 +89,9 @@ class VisualBlock:
     
     def draw(self):
         if self.show_fon:
-            arcade.draw_rect_filled(self.rect, self.base_fon_color)
+            arcade.draw_rect_filled(self.rect, self.curr_fon_color)
         if self.show_frame:
-            arcade.draw_rect_outline(self.rect, self.base_frame_color, self.curr_frame_width)
+            arcade.draw_rect_outline(self.rect, self.curr_frame_color, self.curr_frame_width)
     
     def pulse_fon(self, color, time=None):
         if self.show_pulse_fon:
@@ -101,7 +101,7 @@ class VisualBlock:
                 self.curr_fon_color = color
                 arcade.schedule(self.stop_pulse_fon, time)
     
-    def stop_pulse_fon(self):
+    def stop_pulse_fon(self, delta_time=0):
         arcade.unschedule(self.stop_pulse_fon)
         self.is_pulse_fon = False
         self.curr_fon_color = self.base_fon_color
@@ -119,7 +119,7 @@ class VisualBlock:
                 self.curr_frame_width = width
                 arcade.schedule(self.stop_pulse_frame, time)
 
-    def stop_pulse_frame(self):
+    def stop_pulse_frame(self, delta_time=0):
         arcade.unschedule(self.stop_pulse_frame)
         self.is_pulse_frame = False
         self.curr_frame_color = self.base_frame_color
