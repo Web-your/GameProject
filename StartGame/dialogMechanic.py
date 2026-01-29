@@ -9,7 +9,7 @@ import matplotlib.font_manager as fm
 from arcade import SpriteList
 from pyglet.event import EVENT_HANDLE_STATE
 from pyglet.resource import texture
-
+import os.path
 import EasySprite
 
 
@@ -346,7 +346,6 @@ class StartMenu(arcade.View):
         self.keys = set()
         self.menu_state = MENU_STATE
         pyglet.font.add_file("StartGame/pixcyr2.ttf")
-
         self.setup2()
 
     def setup2(self):  # Список списков координат квадратов для рисования
@@ -356,9 +355,22 @@ class StartMenu(arcade.View):
         self.dialog.base_settings["font_size"] = 22
         self.dialog.refresh_data()
 
-        self.button_options = Button(self.width // 2, self.height // 6 * 2, 200, 60, text="Настройки", line_width_act=4)
-        self.button_new_game = Button(self.width // 2, self.height // 6 * 3, 200, 60, text="Новая игра", line_width_act=4)
-        self.group_button = ButtonGroup(self.button_new_game, self.button_options, division="up-down")
+        file_path = "SaveData.csv"
+        self.saves = os.path.exists(file_path)
+        if self.saves:
+            self.button_game = Button(self.width // 2, self.height // 6 * 3, 200, 60, text="Продолжить",
+                                      line_width_act=4)
+            self.button_options = Button(self.width // 2, self.height // 6, 200, 60, text="Настройки",
+                                         line_width_act=4)
+            self.button_new_game = Button(self.width // 2, self.height // 6 * 2, 200, 60, text="Новая игра",
+                                          line_width_act=4)
+            self.group_button = ButtonGroup(self.button_game, self.button_new_game, self.button_options, division="up-down")
+        else:
+            self.button_options = Button(self.width // 2, self.height // 6 * 2, 200, 60, text="Настройки",
+                                         line_width_act=4)
+            self.button_new_game = Button(self.width // 2, self.height // 6 * 3, 200, 60, text="Новая игра",
+                                          line_width_act=4)
+            self.group_button = ButtonGroup(self.button_new_game, self.button_options, division="up-down")
 
         image = arcade.Sprite(EasySprite.load_texture("StartGame/Start.png", 3.5))
         image.center_x = self.width // 2
@@ -407,7 +419,13 @@ class StartMenu(arcade.View):
 
         if self.button_new_game.button_state:
             self.main_scene_manager.next_scene()
+            with open("SaveData.csv", "w") as file:
+                file.write("Создано")
             print("StartGame")
+
+        if self.saves:
+            if self.button_game.button_state:
+                self.main_scene_manager.next_scene()
 
 
 def setup_menu(main_scene_manager):
