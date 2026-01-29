@@ -503,7 +503,7 @@ class Player(arcade.Sprite):
 
         self.center_x = x
         self.center_y = y
-        self.texture = self.shield_texture
+        self.texture = self.animate_textures[0]
         self.scale = 1
 
         self.speed = 150
@@ -529,12 +529,12 @@ class Player(arcade.Sprite):
         self.center_y += dy
 
         # Если игрок не движется, то срабатывает щит, при нажатии на пробел
-        if dx == 0 and dy == 0:
-            self.is_shield = True
-            self.texture = self.shield_texture
-        else:
-            self.is_shield = False
-            self.texture = self.animate_textures[0]
+        # if dx == 0 and dy == 0:
+        #     self.is_shield = True
+        #     self.texture = self.shield_texture
+        # else:
+        #     self.is_shield = False
+        #     self.texture = self.animate_textures[0]
 
         # Проверка на границы - игрок ходит в пределах доски
         left = board.indent_x

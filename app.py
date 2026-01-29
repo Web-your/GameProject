@@ -1,4 +1,5 @@
 # Name: Иван, Date: 08.01.2026, WhatYouDo: создал файл для запуска всей игры
+import json
 
 import arcade
 from Fight_Mechanic.main import setup_fight
@@ -20,14 +21,16 @@ class SceneManager:
     def next_scene(self):
         func = self.scenes[self.curr_scene_index]
         self.curr_scene_index += 1
+        if self.curr_scene_index >= len(self.scenes):
+            self.curr_scene_index = 0
         func(self)
 
 
 if __name__ == "__main__":
-    main_window = arcade.Window(1000, 700, "Общая битва", resizable=False, fullscreen=False)
+    main_window = arcade.Window(1000, 700, "Общая битва", resizable=False, fullscreen=True)
     scene_manager = SceneManager(main_window)
     scene_manager.setup()
-    arcade.run()
 
+    arcade.run()
 
 """Описание - файл для запуска всей игры"""

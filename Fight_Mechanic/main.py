@@ -3,13 +3,19 @@
 import arcade
 import random
 
+import Defender_Battle.main
+import Fight_Mechanic.Interface
+import FlyArrowsMehanic.FlyArrows
+import healFlySticksMechanic.healAct
 # Импортируем функции для запуска мини-игр
 from Defender_Battle.main import setup_defender
-from Fight_Mechanic.background_persons import BackgroundPerson
 from healFlySticksMechanic.healAct import setup_heal
 from FlyArrowsMehanic.FlyArrows import setup_attack
 
-# Импортируем интерфейс для мини-боя
+from Fight_Mechanic.GameOver import setup_game_over
+from Fight_Mechanic.Victory import  setup_victory
+
+# Импортируем интерфейсы и фоновые персонажей
 from Fight_Mechanic.MiniGameDopObjects import MiniGameDopBox
 from Fight_Mechanic.Interface import Interface
 from Fight_Mechanic.background_persons import BackPersBox
@@ -79,29 +85,34 @@ class PhaseManager:
         for h_type, h_data in data.items():
             a_type, a_data = h_data.values()
 
-            if a_type == "mana":
-                self.fb.count_mana += a_data["count_mana"]
-                if self.fb.count_mana > 10:
-                    self.fb.count_mana = 10
-                self.fb.interface.aura = self.fb.count_mana
-                self.fb.interface.update_aura_point_sprites()
+            if h_type not in self.fb.death_list:
+                if a_type == "mana":
+                    self.fb.count_mana += a_data["count_mana"]
+                    if self.fb.count_mana > 10:
+                        self.fb.count_mana = 10
+                    self.fb.interface.aura = self.fb.count_mana
+                    self.fb.interface.update_aura_point_sprites()
 
-            elif a_type == "main":
-                self.mini_games_list.append(TYPE_INDEX_DICT[h_type])
-                if h_type == "attack":
-                    self.fb.attack_hero.curr_enemies = self.fb.enemies_list[a_data["attack_enemies"]]
-                    print("attack_enemies:", a_data["attack_enemies"])
-                elif h_type == "heal":
-                    self.fb.heal_hero.curr_heal_hero = self.fb.hero_dict[a_data["heal_hero"]]
+                elif a_type == "main":
+                    self.mini_games_list.append(TYPE_INDEX_DICT[h_type])
+                    if h_type == "attack":
+                            self.fb.attack_hero.curr_enemies = self.fb.enemies_list[a_data["attack_enemies"]]
+                    elif h_type == "heal":
+                        self.fb.heal_hero.curr_heal_hero = self.fb.hero_dict[a_data["heal_hero"]]
 
-            elif a_type == "support":
-                self.fb.hero_dict[a_data["support_hero"]].add_support()
+                elif a_type == "support":
+                    self.fb.hero_dict[a_data["support_hero"]].add_support()
 
-            elif a_type == "item":
-                # item = self.fb.item_list[a_data["item"]]
-                item = self.fb.item_list[0]
-                item_hero = a_data["item_hero"]
-                item.use(item_hero)
+                elif a_type == "item":
+                    # item = self.fb.item_list[a_data["item"]]
+                    item = self.fb.item_list[0]
+                    item_hero = a_data["item_hero"]
+                    item.use(item_hero)
+
+        if len(self.mini_games_list) != 0:
+            if self.fb.count_mana < len(self.mini_games_list):
+                rest_mini_games = len(self.mini_games_list) - self.fb.count_mana
+                self.mini_games_list = self.mini_games_list[:rest_mini_games * (-1)]
 
         if len(self.mini_games_list) != 0:
             self.fb.count_mana -= len(self.mini_games_list)
@@ -122,9 +133,14 @@ class PhaseManager:
         self.curr_hero = None
         self.mini_games_list = []
 
+        if self.phase_count > 1:
+            hero = random.choice(self.fb.hero_list)
+            hero.lose_health(0.3)
+
         self.phase_count += 1
         if self.phase_count > self.max_phase_count:
-            ...
+            self.fb.scene_manager.curr_scene_index = 5
+            self.fb.scene_manager.next_scene()
 
     def temporary_updates(self):
         self.fb.interface.update_aura_point_sprites()
@@ -138,7 +154,7 @@ class SceneManager:
         self.window = fight_box.window
 
         # Добавляем сцены в очередь: каждая сцена - функция, которая запускает механику мини-битвы
-        self.scenes = [menu_setup, setup_heal, setup_defender, setup_attack]
+        self.scenes = [menu_setup, setup_heal, setup_defender, setup_attack, setup_game_over, setup_victory]
         self.curr_scene_index = 0 # Индекс текущей сцены в очереди
         self.next_scene_index = 0
 
@@ -149,9 +165,10 @@ class SceneManager:
 
     # Запускаем следующую сцену
     def next_scene(self, *args):
-        func = self.scenes[self.curr_scene_index]
-        self.change_curr_scene_index()
-        func(self)  # Передаём себя, чтобы вернуться и запустить следующую сцену
+        if self.fb.status != "Game_Over":
+            func = self.scenes[self.curr_scene_index]
+            self.change_curr_scene_index()
+            func(self)  # Передаём себя, чтобы вернуться и запустить следующую сцену
 
     # Меняем индекс текущей сцены
     def change_curr_scene_index(self):
@@ -271,12 +288,24 @@ class Enemies:
         self.health = 1
 
     def lose_health(self, main_lose_health):
-        self.health -= main_lose_health
-        if self.health < 0:
-            self.health = 0
+        if self.number not in self.fb.death_enemies_list:
+            self.health -= main_lose_health
+            if self.health <= 0:
+                self.health = 0
 
-        back_enemies = self.fb.back_persons.enemies_list[self.number]
-        back_enemies.health_bar.update(self.health)
+                self.fb.count_death_enemies += 1
+                if self.fb.count_death_enemies >= 3:
+                    print("all enemies death")
+                    self.fb.scene_manager.curr_scene_index = 5
+                    self.fb.scene_manager.next_scene()
+
+                else:
+                    self.fb.back_persons.enemies_list[self.number].remove_from_sprite_lists()
+                    self.fb.death_enemies_list.append(self.number)
+
+            else:
+                back_enemies = self.fb.back_persons.enemies_list[self.number]
+                back_enemies.health_bar.update(self.health)
 
 
 # Персонажи
@@ -286,6 +315,7 @@ class Enemies:
 class Hero:
     def __init__(self, fb, h_type):
         self.fb = fb
+        self.mg_hero_list = self.fb.mg_box.interface.hero_list
         self.mg_hero_dict = self.fb.mg_box.interface.hero_list.hero_dict
         self.back_hero_dict = self.fb.back_persons.hero_dict
 
@@ -293,28 +323,49 @@ class Hero:
         self.health = 1
 
     def lose_health(self, main_lose_health):
-        self.health -= main_lose_health
-        if self.health < 0:
-            self.health = 0
+        if self.type not in self.fb.death_list:
+            mg_hero = self.mg_hero_dict[self.type]
+            back_hero = self.back_hero_dict[self.type]
 
-        mg_hero = self.mg_hero_dict[self.type]
-        mg_hero.health_bar.update(self.health)
-        mg_hero.hero_fon_plank.pulse_frame(color=arcade.color.RED, width=7)
+            self.health -= main_lose_health
 
-        back_hero = self.back_hero_dict[self.type]
-        back_hero.health_bar.update(self.health)
+            if self.health <= 0:
+                self.health = 0
+
+                self.fb.scene_manager.curr_scene_index = 4
+                self.fb.scene_manager.next_scene()
+
+                # self.fb.death_list.append(self.type)
+                # self.fb.hero_list.remove(self)
+                # del self.fb.hero_dict[self.type]
+                #
+                # mg_hero_index = self.mg_hero_list.types_lst.index(self.type)
+                # del self.mg_hero_list.hero_lst[mg_hero_index]
+                #
+                # back_hero.remove_from_sprite_lists()
+                # del self.back_hero_dict[self.type]
+                #
+                # if self.fb.phase_manager.curr_hero == self.type:
+                #     self.fb.scene_manager.next_scene()
+
+            else:
+                mg_hero.health_bar.update(self.health)
+                mg_hero.hero_fon_plank.pulse_frame(color=arcade.color.RED, width=7)
+
+                back_hero.health_bar.update(self.health)
 
     def get_health(self, main_heal_health):
-        self.health += main_heal_health
-        if self.health > 1:
-            self.health = 1
+        if self.type not in self.fb.death_list:
+            self.health += main_heal_health
+            if self.health > 1:
+                self.health = 1
 
-        mg_hero = self.mg_hero_dict[self.type]
-        mg_hero.health_bar.update(self.health)
-        mg_hero.hero_fon_plank.pulse_frame(color=arcade.color.GREEN, width=7)
+            mg_hero = self.mg_hero_dict[self.type]
+            mg_hero.health_bar.update(self.health)
+            mg_hero.hero_fon_plank.pulse_frame(color=arcade.color.GREEN, width=7)
 
-        back_hero = self.back_hero_dict[self.type]
-        back_hero.health_bar.update(self.health)
+            back_hero = self.back_hero_dict[self.type]
+            back_hero.health_bar.update(self.health)
 
     def add_support(self):
         pass
@@ -356,6 +407,10 @@ class DefenseHero(Hero):
 
     def raise_mana(self, main_raise_mana):
         self.fb.count_mana += main_raise_mana
+        if self.fb.count_mana > 10:
+            self.fb.count_mana = 10
+        self.fb.interface.aura = self.fb.count_mana
+        self.fb.interface.update_aura_point_sprites()
 
     def add_support(self):
         self.lose_health_boost -= 0.05
@@ -389,6 +444,10 @@ class HealHero(Hero):
 # Содержит все объекты
 class FightBox:
     def __init__(self, main_scene_manager, *settings):
+        self.status = "Start"
+        self.count_death_enemies = 0
+        self.death_enemies_list = []
+
         self.main_scene_manager = main_scene_manager # Ссылка на предыдущий менеджер сцен
         self.window = main_scene_manager.window # Ссылка на окно
 
@@ -420,6 +479,8 @@ class FightBox:
         self.enemies_list = [Enemies(self, 0), Enemies(self, 1), Enemies(self, 2)]
         self.item_list = [Item(self, name="heal_item", effects=[HealEffect(self)])]
 
+        self.death_list = []
+
         self.interface = Interface(self)  # Интерфейс
 
         self.scene_manager = SceneManager(self)  # Собственный менеджер сцен
@@ -439,11 +500,11 @@ def setup_fight(main_scene_manager, *settings):
 
 # Функция для остановки общей битвы
 def stop_fight(fight_box):
-    fight_box.fon_music_player.stop()
+    arcade.stop_sound(fight_box.fon_music_player)
 
     main_scene_manager = fight_box.main_scene_manager
     # Вносим изменения в main_scene_manager ...
-    del fight_box
+    fight_box.status = "Game_Over"
     main_scene_manager.next_scene()
 
 
